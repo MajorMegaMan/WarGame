@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a019d1a3731242a4ebad0f7b887b9a53, type: 3}
   m_Name: TestMaker
   m_EditorClassIdentifier: 
-  textureAtlas: {fileID: 0}
-  horizontalSpriteCount: 0
-  pixelWidth: 0
-  pixelsPerUnit: 0
+  textureAtlas: {fileID: 2800000, guid: 00dd1231a54231946ab0ef148f8c7865, type: 3}
+  horizontalSpriteCount: 2
+  pixelWidth: 64
+  pixelHeight: 64
+  pixelsPerUnit: 64
