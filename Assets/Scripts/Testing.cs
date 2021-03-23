@@ -4,32 +4,43 @@ using UnityEngine;
 
 public class Testing : MonoBehaviour
 {
-    public int intialWidth = 5;
-    public int intialHeight = 5;
+    public int initialWidth = 5;
+    public int initialHeight = 5;
     public float initalCellSize = 1.0f;
-    
-    GridMap<Tile.Type> grid;
-
-    Tile[,] tiles;
+    [HideInInspector]
+    public GridMap<Tile> grid;
 
     public GameObject tilePrefab;
-    public Texture2D spriteMap;
 
-    Tile.Type value = 0;
+    public SpriteMaker spriteMaker;
+    Sprite[] tileSprites;
 
     void Awake()
     {
-        grid = new GridMap<Tile.Type>(intialWidth, intialHeight, initalCellSize, Vector3.zero);
+        grid = new GridMap<Tile>(initialWidth, initialHeight, initalCellSize, Vector3.zero);
 
-        tiles = new Tile[intialWidth, intialHeight];
+        tileSprites = spriteMaker.CreateSprites();
 
         for (int x = 0; x < grid.GetWidth(); x++)
         {
             for (int y = 0; y < grid.GetHeight(); y++)
             {
                 GameObject newObject = Instantiate(tilePrefab, grid.GetWorldPosition(x, y), Quaternion.identity, this.transform);
-                tiles[x, y] = newObject.GetComponent<Tile>();
+
+                grid.SetValue(x, y, newObject.GetComponent<Tile>());
+
                 newObject.name = "Tile: " + x + ", " + y;
+            }
+        }
+    }
+
+    private void Start()
+    {
+        for (int x = 0; x < grid.GetWidth(); x++)
+        {
+            for (int y = 0; y < grid.GetHeight(); y++)
+            {
+                grid.GetValue(x, y).SetSprite(tileSprites[0]);
             }
         }
     }
@@ -37,49 +48,26 @@ public class Testing : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        for (int x = 0; x < grid.GetWidth(); x++)
-        {
-            for (int y = 0; y < grid.GetHeight(); y++)
-            {
-                Debug.DrawLine(grid.GetWorldPosition(x, y), grid.GetWorldPosition(x, y + 1));
-                Debug.DrawLine(grid.GetWorldPosition(x, y), grid.GetWorldPosition(x + 1, y));
-            }
-        }
-
         if(Input.GetMouseButtonDown(0))
         {
             Vector3 mousePos = Utilities.GetMousePosition();
-            grid.SetValue(mousePos, value++);
-            grid.GetInfo(mousePos, out int targetX, out int targetY, out Tile.Type targetVal);
-            Debug.Log("Clicked: " + targetX + "," + targetY + " = " + targetVal.ToString());
+
+            grid.GetInfo(mousePos, out int targetX, out int targetY, out Tile targetVal);
+            Debug.Log("Clicked: " + targetVal.ToString());
 
             // Set Tile
-            Rect rec = Rect.zero;
-            rec.x = 0;
-            rec.y = 0;
-            rec.width = 64;
-            rec.height = 64;
-
-            Sprite sprite = Sprite.Create(spriteMap, rec, Vector2.zero);
-            SetTileSprite(mousePos, sprite);
+            SetTileSprite(mousePos, tileSprites[0]);
         }
 
         if (Input.GetMouseButtonDown(1))
         {
             Vector3 mousePos = Utilities.GetMousePosition();
-            grid.SetValue(mousePos, value++);
-            grid.GetInfo(mousePos, out int targetX, out int targetY, out Tile.Type targetVal);
-            Debug.Log("Clicked: " + targetX + "," + targetY + " = " + targetVal.ToString());
+
+            grid.GetInfo(mousePos, out int targetX, out int targetY, out Tile targetVal);
+            Debug.Log("Clicked: " + targetVal.ToString());
 
             // Set Tile
-            Rect rec = Rect.zero;
-            rec.x = 64;
-            rec.y = 0;
-            rec.width = 64;
-            rec.height = 64;
-
-            Sprite sprite = Sprite.Create(spriteMap, rec, Vector2.zero, 64);
-            SetTileSprite(mousePos, sprite);
+            SetTileSprite(mousePos, tileSprites[1]);
         }
     }
 
@@ -91,6 +79,23 @@ public class Testing : MonoBehaviour
 
     void SetTileSprite(int x, int y, Sprite sprite)
     {
-        tiles[x, y].SetSprite(sprite);
+        grid.GetValue(x, y).SetSprite(sprite);
+    }
+
+    private void OnDrawGizmos()
+    {
+        GridMap<Tile.Type> grid = new GridMap<Tile.Type>(initialWidth, initialHeight, initalCellSize, Vector3.zero);
+
+        for (int x = 0; x < grid.GetWidth(); x++)
+        {
+            for (int y = 0; y < grid.GetHeight(); y++)
+            {
+                Gizmos.DrawLine(grid.GetWorldPosition(x, y), grid.GetWorldPosition(x, y + 1));
+                Gizmos.DrawLine(grid.GetWorldPosition(x, y), grid.GetWorldPosition(x + 1, y));
+            }
+        }
+
+        Gizmos.DrawLine(grid.GetWorldPosition(0, grid.GetHeight()), grid.GetWorldPosition(grid.GetWidth(), grid.GetHeight()));
+        Gizmos.DrawLine(grid.GetWorldPosition(grid.GetWidth(), grid.GetHeight()), grid.GetWorldPosition(grid.GetWidth(), 0));
     }
 }

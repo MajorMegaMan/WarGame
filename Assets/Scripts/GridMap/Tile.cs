@@ -11,12 +11,11 @@ public class Tile : MonoBehaviour
         blocked
     }
 
-    Type type = Type.walkable;
+    public Type type = Type.walkable;
 
-    // Start is called before the first frame update
-    void Start()
+    void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
+        spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
     }
 
     // Update is called once per frame
