@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 519420032}
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
+  - component: {fileID: 519420030}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -149,6 +150,20 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   m_Enabled: 1
+--- !u!114 &519420030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0291583b308e80a4e88fbdc061ff2ddc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridEdgeClamp: 3
+  smoothMove: 0.02
 --- !u!20 &519420031
 Camera:
   m_ObjectHideFlags: 0
@@ -216,7 +231,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1146942992}
   - component: {fileID: 1146942991}
-  - component: {fileID: 1146942993}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -236,9 +250,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aa79565543afa5747ae937ee5fcad985, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  initialWidth: 5
-  initialHeight: 5
+  initialWidth: 25
+  initialHeight: 25
   initalCellSize: 1
+  camControl: {fileID: 519420030}
   tilePrefab: {fileID: 2867592135939656245, guid: 04e03406b9077814ba616f6719aed77a, type: 3}
   spriteMaker: {fileID: 11400000, guid: f93f824d693cfa548967eed4f73242f4, type: 2}
 --- !u!4 &1146942992
@@ -255,17 +270,3 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1146942993
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1146942990}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5c1fe676c5c583144b025f0d81e9ae5c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gridManager: {fileID: 1146942991}
-  colour: {r: 0, g: 0, b: 0, a: 1}

@@ -11,6 +11,16 @@ public class GridMap<T>
 
     T[,] gridArray;
 
+    AABB bounds;
+
+    public struct AABB
+    {
+        public float minX;
+        public float minY;
+        public float maxX;
+        public float maxY;
+    }
+
     public GridMap(int width, int height, float cellSize, Vector3 origin)
     {
         this.width = width;
@@ -19,6 +29,16 @@ public class GridMap<T>
         this.origin = origin;
 
         gridArray = new T[width, height];
+
+        Vector3 minPos = GetWorldPosition(0, 0);
+        Vector3 maxPos = GetWorldPosition(width - 1, height - 1);
+
+        bounds = new AABB();
+        bounds.minX = minPos.x;
+        bounds.minY = minPos.y;
+
+        bounds.maxX = maxPos.x + cellSize;
+        bounds.maxY = maxPos.y + cellSize;
     }
 
     public int GetWidth()
@@ -79,5 +99,10 @@ public class GridMap<T>
     {
         GetXY(worldPosition, out x, out y);
         value = GetValue(x, y);
+    }
+
+    public AABB GetBounds()
+    {
+        return bounds;
     }
 }
