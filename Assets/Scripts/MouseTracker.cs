@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.U2D;
 
 public class MouseTracker : MonoBehaviour
 {
@@ -13,13 +12,13 @@ public class MouseTracker : MonoBehaviour
     public UnityEvent Stay;
     public UnityEvent Exit;
 
-    SpriteShapeRenderer m_spriteRenderer;
+    UnityEngine.U2D.SpriteShapeRenderer m_spriteRenderer;
 
     Color m_defaultColour;
 
     private void Awake()
     {
-        m_spriteRenderer = GetComponent<SpriteShapeRenderer>();
+        m_spriteRenderer = GetComponent<UnityEngine.U2D.SpriteShapeRenderer>();
         m_defaultColour = m_spriteRenderer.color;
     }
 
