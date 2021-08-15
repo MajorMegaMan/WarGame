@@ -4,8 +4,23 @@ using UnityEngine;
 
 namespace Voronoi.Deluany
 {
-    public static class DelaunyMap
+    public class DelaunyMap
     {
+        public List<DelPoint> delPoints;
+        public List<DelTriangle> delTris;
+
+        public DelaunyMap(List<Vector2> points)
+        {
+            delPoints = new List<DelPoint>();
+            delTris = new List<DelTriangle>();
+
+            for(int i = 0; i < points.Count; i++)
+            {
+                delPoints.Add(new DelPoint(points[i], i));
+            }
+            delTris = CalcTriangles(delPoints);
+        }
+
         public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints)
         {
             int triCount = 0;

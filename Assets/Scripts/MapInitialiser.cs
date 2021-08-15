@@ -1,12 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Voronoi;
 
 public class MapInitialiser : MonoBehaviour
 {
     public CountryRegion countryRegionPrefab;
 
     List<CountryRegion> m_countryRegionList;
+    CountryShape[] countryShapes;
 
     [System.Serializable]
     public struct CountryShape
@@ -46,6 +48,11 @@ public class MapInitialiser : MonoBehaviour
 
     // Update is called once per frame
     void Update()
+    {
+        
+    }
+
+    private void OnDrawGizmos()
     {
         
     }

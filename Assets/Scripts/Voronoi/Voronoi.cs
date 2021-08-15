@@ -46,6 +46,31 @@ namespace Voronoi
 
             return points;
         }
+
+        public static List<DelToVPoint> FindShapes(List<VoronoiPoint> vPoints, DelaunyMap delMap)
+        {
+            List<DelToVPoint> result = new List<DelToVPoint>();
+            foreach(DelPoint delPoint in delMap.delPoints)
+            {
+                DelToVPoint toAdd = new DelToVPoint();
+                toAdd.delPoint = delPoint;
+                toAdd.connectedVPoints = new List<VoronoiPoint>();
+                result.Add(toAdd);
+            }
+
+            for(int i = 0; i < delMap.delTris.Count; i++)
+            {
+                foreach(var delToV in result)
+                {
+                    if(delToV.delPoint.IsInTriangle(delMap.delTris[i]))
+                    {
+                        delToV.connectedVPoints.Add(vPoints[i]);
+                    }
+                }
+            }
+
+            return result;
+        }
     }
 
     public struct VoronoiPoint
@@ -53,5 +78,11 @@ namespace Voronoi
         public int index;
         public Vector2 position;
         public List<int> connectedPoints;
+    }
+
+    public struct DelToVPoint
+    {
+        public DelPoint delPoint;
+        public List<VoronoiPoint> connectedVPoints;
     }
 }
