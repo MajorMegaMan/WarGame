@@ -36,7 +36,7 @@ namespace Voronoi.Deluany
 
                         if(ConfirmTriangleAgainstPointList(potentialTri, delPoints, a, b, c))
                         {
-                            potentialTri.index = triCount;
+                            potentialTri.SetIndex(triCount);
                             triCount++;
                             delTriangles.Add(potentialTri);
                         }
@@ -49,11 +49,7 @@ namespace Voronoi.Deluany
             {
                 for(int j = i + 1; j < delTriangles.Count; j++)
                 {
-                    if(delTriangles[i].IsSharingTwoPoints(delTriangles[j]))
-                    {
-                        delTriangles[i].connectedTris.Add(delTriangles[j].index);
-                        delTriangles[j].connectedTris.Add(delTriangles[i].index);
-                    }
+                    delTriangles[i].IdentifyConnections(delTriangles[j]);
                 }
             }
 
@@ -155,6 +151,56 @@ namespace Voronoi.Deluany
         }
     }
 
+    public class Connection
+    {
+        public int owner;
+        public int otherTriangle;
+        public DelPoint startPoint;
+        public DelPoint endPoint;
+
+        // if owner is the same as otherTriangle, then it will be treated as not having a connection
+        public bool isEmpty { get { return owner == otherTriangle; } }
+
+        public Connection(int owner, DelPoint start, DelPoint end)
+        {
+            this.owner = owner;
+            otherTriangle = owner;
+            startPoint = start;
+            endPoint = end;
+        }
+
+        public Vector2 GetMidPoint()
+        {
+            Vector2 vector = endPoint.point - startPoint.point;
+            vector *= 0.5f;
+            return vector + startPoint.point;
+        }
+
+        public bool ProcessConnection(Connection connection)
+        {
+            bool containsStart = false;
+            bool containsEnd = false;
+            if (startPoint.index == connection.startPoint.index || startPoint.index == connection.endPoint.index)
+            {
+                // start is a match
+                containsStart = true;
+            }
+            if(endPoint.index == connection.startPoint.index || endPoint.index == connection.endPoint.index)
+            {
+                // end is a match
+                containsEnd = true;
+            }
+
+            if(containsStart && containsEnd)
+            {
+                otherTriangle = connection.owner;
+                connection.otherTriangle = owner;
+                return true;
+            }
+            return false;
+        }
+    }
+
     public struct DelTriangle
     {
         public int index;
@@ -163,7 +209,7 @@ namespace Voronoi.Deluany
         public DelPoint pointB;
         public DelPoint pointC;
 
-        public List<int> connectedTris;
+        public List<Connection> connectedTris;
 
         public DelTriangle(DelPoint pointA, DelPoint pointB, DelPoint pointC)
         {
@@ -172,7 +218,17 @@ namespace Voronoi.Deluany
             this.pointC = pointC;
 
             index = 0;
-            connectedTris = new List<int>();
+            connectedTris = null;
+        }
+
+        public void SetIndex(int index)
+        {
+            this.index = index;
+
+            connectedTris = new List<Connection>();
+            connectedTris.Add(new Connection(index, pointA, pointB));
+            connectedTris.Add(new Connection(index, pointB, pointC));
+            connectedTris.Add(new Connection(index, pointC, pointA));
         }
 
         public Triangle GetTriangle()
@@ -188,7 +244,8 @@ namespace Voronoi.Deluany
         public bool IsSharingTwoPoints(DelTriangle otherTri)
         {
             int shareCount = 0;
-            if(pointA.IsInTriangle(otherTri))
+
+            if (pointA.IsInTriangle(otherTri))
             {
                 shareCount++;
             }
@@ -201,6 +258,24 @@ namespace Voronoi.Deluany
                 shareCount++;
             }
             return shareCount > 1;
+        }
+
+        // returns the connection of this triangle.
+        // returns null if there are no connections between triangles
+        public Connection IdentifyConnections(DelTriangle otherTri)
+        {
+            for(int i = 0; i < connectedTris.Count; i++)
+            {
+                // if connection matches any connection in this triangle
+                for(int j = 0; j < otherTri.connectedTris.Count; j++)
+                {
+                    if(connectedTris[i].ProcessConnection(otherTri.connectedTris[j]))
+                    {
+                        return connectedTris[i];
+                    }
+                }
+            }
+            return null;
         }
     }
 
@@ -282,6 +357,26 @@ namespace Voronoi.Deluany
 
             float radius = (A * B * C) / Mathf.Sqrt((A + B + C) * (B + C - A) * (C + A - B) * (A + B - C));
             return radius;
+        }
+
+        static float sign(Vector2 point1, Vector2 point2, Vector2 point3)
+        {
+            return (point1.x - point3.x) * (point2.y - point3.y) - (point2.x - point3.x) * (point1.y - point3.y);
+        }
+
+        public bool ContainsPoint(Vector2 point)
+        {
+            float d1, d2, d3;
+            bool hasNeg, hasPos;
+
+            d1 = sign(point, pointA, pointB);
+            d2 = sign(point, pointB, pointC);
+            d3 = sign(point, pointC, pointA);
+
+            hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+            hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+            return !(hasNeg && hasPos);
         }
     }
 }

@@ -16,16 +16,26 @@ public class DebugVoronoi : MonoBehaviour
 
     public int shapeCount = 0;
 
+    [Header("Deluanay")]
     public bool drawDelTriangles = true;
     public bool drawFirstTriCircle = true;
+    public int triangleIndex = 0;
+
+    [Header("Voronoi")]
     public bool drawVoronoiPoints = true;
     public bool drawVoronoiEdges = true;
+
+    [Header("Bisectors")]
+    public bool drawMidPoints = true;
+    public bool drawPerpindicular = true;
+
+    [Header("GiftWrapping")]
     public bool drawShapes = true;
     public bool drawVToCentre = true;
     public bool drawSingleShape = false;
     public int drawShapeIndex = 0;
 
-    public List<TempShape> debugShapes;
+    public List<VoronoiShape> debugShapes;
 
     void Awake()
     {
@@ -99,7 +109,12 @@ public class DebugVoronoi : MonoBehaviour
 
     void InitVoronoi(out List<VoronoiPoint> vPoints, List<DelTriangle> delTris)
     {
-        vPoints = VoronoiDiagram.Create(delTris);
+        vPoints = VoronoiDiagram.CreateVPoints(delTris);
+    }
+
+    List<VoronoiShape> InitVShapes(DelaunyMap delMap, List<VoronoiPoint> vPoints)
+    {
+        return VoronoiDiagram.FindShapes(vPoints, delMap);
     }
 
     private void DrawDelTris(List<DelTriangle> delTris)
@@ -130,129 +145,6 @@ public class DebugVoronoi : MonoBehaviour
         }
     }
 
-    public class TempShape
-    {
-        public Vector2 centre = Vector2.zero;
-        public List<int> points = new List<int>();
-        public List<int> otherConnected = new List<int>();
-
-        public void GiftWrap(List<VoronoiPoint> vPoints)
-        {
-            // Check shape has enough points
-            if(points.Count < 3)
-            {
-                Debug.LogError("This shape shouldn't exist. There is less than 3 vertices");
-                return;
-            }
-
-            // Initialise hull
-            List<int> hull = new List<int>();
-
-            // Find Left most point
-            int leftMost = 0; // index of points, not vPoints
-            for(int i = 1; i < points.Count; i++)
-            {
-                if(vPoints[points[i]].position.x < vPoints[points[leftMost]].position.x)
-                {
-                    leftMost = i;
-                }
-            }
-
-            // start from leftmost, keep moving counter clockwise until reach start position again
-            int p = leftMost;
-            int q = 0;
-            do
-            {
-                // Add current to hull result
-                hull.Add(points[p]);
-
-                // Search for a point 'q' such that orientation(p, x,
-                // q) is counterclockwise for all points 'x'. The idea
-                // is to keep track of last visited most counterclock-
-                // wise point in q. If any point 'i' is more counterclock-
-                // wise than q, then update q.
-                q = (p + 1) % points.Count;
-                for (int i = 0; i < points.Count; i++)
-                {
-                    // If i is more counterclockwise than current q, then
-                    // update q
-                    if (Orientation(vPoints[points[p]].position, vPoints[points[i]].position, vPoints[points[q]].position) == 2)
-                    {
-                        q = i;
-                    }
-                }
-
-                // Now q is the most counterclockwise with respect to p
-                // Set p as q for next iteration, so that q is added to
-                // result 'hull'
-                p = q;
-            } while (p != leftMost);
-
-            // Finish result
-            points = hull;
-        }
-    }
-
-    // Finds winding order or if they are co linear of any 3 given points.
-    // 0 = p, q, r are co linear (a straight line)
-    // 1 = ClockWise Triangle
-    // 2 = Counter-clockWise Triangle
-    static int Orientation(Vector2 p, Vector2 q, Vector2 r)
-    {
-        float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-        if(val == 0)
-        {
-            return 0; // co linear
-        }
-        return (val > 0) ? 1 : 2;
-    }
-
-    class TempDelPointTris
-    {
-        public int pointIndex = 0;
-        public List<int> tris = new List<int>();
-
-        public TempDelPointTris(int pointIndex)
-        {
-            this.pointIndex = pointIndex;
-        }
-    }
-
-    List<TempShape> InitVShapes(DelaunyMap delMap, List<VoronoiPoint> vPoints)
-    {
-        // would rather do a* to search back to the start using as the crow flies but being lazy right now.
-
-        List<DelPoint> delPoints = delMap.delPoints;
-        List<DelTriangle> delTris = delMap.delTris;
-
-        List<TempShape> shapes = new List<TempShape>();
-
-        var delToVPoints = VoronoiDiagram.FindShapes(vPoints, delMap);
-
-        foreach(var delToV in delToVPoints)
-        {
-            if(delToV.connectedVPoints.Count < 3)
-            {
-                continue;
-            }
-
-            TempShape tempShape = new TempShape();
-            tempShape.centre = delToV.delPoint.point;
-            foreach(var vPoint in delToV.connectedVPoints)
-            {
-                tempShape.points.Add(vPoint.index);
-            }
-            shapes.Add(tempShape);
-        }
-
-        foreach(var shape in shapes)
-        {
-            shape.GiftWrap(vPoints);
-        }
-
-        return shapes;
-    }
-
     void DrawTriangleCircle(Triangle tri)
     {
         Gizmos.color = Color.green;
@@ -275,11 +167,83 @@ public class DebugVoronoi : MonoBehaviour
         Gizmos.color = Color.yellow;
         foreach (var point in vPoints)
         {
-            foreach(int index in point.connectedPoints)
+            foreach(Connection connection in point.connectedPoints)
             {
-                Gizmos.DrawLine(point.position, vPoints[index].position);
+                if(!connection.isEmpty)
+                {
+                    int index = connection.otherTriangle;
+                    Gizmos.DrawLine(point.position, vPoints[index].position);
+                }
             }
         }
+    }
+
+    void DrawMidPoints(List<VoronoiPoint> vPoints)
+    {
+        Gizmos.color = Color.cyan;
+        foreach (var point in vPoints)
+        {
+            foreach (Connection connection in point.connectedPoints)
+            {
+                Gizmos.DrawSphere(connection.GetMidPoint(), 0.2f);
+            }
+        }
+    }
+
+    void DrawPerpindicularBisectors(List<VoronoiPoint> vPoints)
+    {
+        Gizmos.color = Color.cyan;
+        foreach (var point in vPoints)
+        {
+            foreach (Connection connection in point.connectedPoints)
+            {
+                if(!connection.isEmpty)
+                {
+                    Vector2 midPoint = connection.GetMidPoint();
+                    Gizmos.DrawLine(point.position, midPoint);
+                }
+                else
+                {
+                    Vector2 midPoint = connection.GetMidPoint();
+                    Vector2 vPosition = vPoints[connection.owner].position;
+                    Vector2 dir = (midPoint - vPosition).normalized;
+
+                    if(!vPoints[connection.owner].isOutsideTri)
+                    {
+                        dir *= -1;
+                    }
+
+                    Vector2 targetLocation = vPosition + dir * 10.0f;
+                    Gizmos.DrawLine(vPosition, targetLocation);
+                }
+            }
+        }
+    }
+
+    void DrawShape(VoronoiShape shape, List<VoronoiPoint> vPoints)
+    {
+        Color shapeColour = Color.green;
+
+        for (int i = 0; i < shape.points.Count - 1; i++)
+        {
+            Gizmos.color = shapeColour;
+            Gizmos.DrawLine(vPoints[shape.points[i]].position, vPoints[shape.points[i + 1]].position);
+        }
+        Gizmos.color = shapeColour;
+        Gizmos.DrawLine(vPoints[shape.points[shape.points.Count - 1]].position, vPoints[shape.points[0]].position);
+    }
+
+    void DrawVToCentre(VoronoiShape shape, List<VoronoiPoint> vPoints)
+    {
+        Color centreColour = Color.cyan;
+
+        for (int i = 0; i < shape.points.Count - 1; i++)
+        {
+            Gizmos.color = centreColour;
+            Gizmos.DrawLine(vPoints[shape.points[i]].position, shape.centre);
+        }
+        Gizmos.color = centreColour;
+        Gizmos.DrawLine(vPoints[shape.points[shape.points.Count - 1]].position, shape.centre);
     }
 
     void OnDrawGizmos()
@@ -305,7 +269,7 @@ public class DebugVoronoi : MonoBehaviour
         }
         if(drawFirstTriCircle)
         {
-            DrawTriangleCircle(delaunyMap.delTris[0].GetTriangle());
+            DrawTriangleCircle(delaunyMap.delTris[triangleIndex].GetTriangle());
         }
 
             InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
@@ -318,6 +282,16 @@ public class DebugVoronoi : MonoBehaviour
             DrawVoronoiConnections(drawVPoints);
         }
 
+        if(drawMidPoints)
+        {
+            DrawMidPoints(drawVPoints);
+        }
+
+        if(drawPerpindicular)
+        {
+            DrawPerpindicularBisectors(drawVPoints);
+        }
+
         //if(!Application.isPlaying)
         //{
         //    return;
@@ -327,64 +301,32 @@ public class DebugVoronoi : MonoBehaviour
 
         if (drawShapes)
         {
-            Color shapeColour = Color.green;
-
             if(drawSingleShape)
             {
                 var shape = shapes[drawShapeIndex];
-                {
-                    for (int i = 0; i < shape.points.Count - 1; i++)
-                    {
-                        Gizmos.color = shapeColour;
-                        Gizmos.DrawLine(drawVPoints[shape.points[i]].position, drawVPoints[shape.points[i + 1]].position);
-                    }
-                    Gizmos.color = shapeColour;
-                    Gizmos.DrawLine(drawVPoints[shape.points[shape.points.Count - 1]].position, drawVPoints[shape.points[0]].position);
-                }
+                DrawShape(shape, drawVPoints);
             }
             else
             {
                 foreach (var shape in shapes)
                 {
-                    for (int i = 0; i < shape.points.Count - 1; i++)
-                    {
-                        Gizmos.color = shapeColour;
-                        Gizmos.DrawLine(drawVPoints[shape.points[i]].position, drawVPoints[shape.points[i + 1]].position);
-                    }
-                    Gizmos.color = shapeColour;
-                    Gizmos.DrawLine(drawVPoints[shape.points[shape.points.Count - 1]].position, drawVPoints[shape.points[0]].position);
+                    DrawShape(shape, drawVPoints);
                 }
             }
         }
 
         if (drawVToCentre)
         {
-            Color centreColour = Color.cyan;
-
             if(drawSingleShape)
             {
                 var shape = shapes[drawShapeIndex];
-                {
-                    for (int i = 0; i < shape.points.Count - 1; i++)
-                    {
-                        Gizmos.color = centreColour;
-                        Gizmos.DrawLine(drawVPoints[shape.points[i]].position, shape.centre);
-                    }
-                    Gizmos.color = centreColour;
-                    Gizmos.DrawLine(drawVPoints[shape.points[shape.points.Count - 1]].position, shape.centre);
-                }
+                DrawVToCentre(shape, drawVPoints);
             }
             else
             {
                 foreach (var shape in shapes)
                 {
-                    for (int i = 0; i < shape.points.Count - 1; i++)
-                    {
-                        Gizmos.color = centreColour;
-                        Gizmos.DrawLine(drawVPoints[shape.points[i]].position, shape.centre);
-                    }
-                    Gizmos.color = centreColour;
-                    Gizmos.DrawLine(drawVPoints[shape.points[shape.points.Count - 1]].position, shape.centre);
+                    DrawVToCentre(shape, drawVPoints);
                 }
             }
         }
