@@ -17,13 +17,19 @@ public class DebugVoronoi : MonoBehaviour
     public int shapeCount = 0;
 
     [Header("Deluanay")]
+    public bool drawTargetDelPoint = true;
+    public int targetDelPoint = 0;
     public bool drawDelTriangles = true;
-    public bool drawFirstTriCircle = true;
+    public bool drawTargetTriCircle = true;
     public int triangleIndex = 0;
+    public bool drawMeanCentre = true;
 
     [Header("Voronoi")]
     public bool drawVoronoiPoints = true;
     public bool drawVoronoiEdges = true;
+    public float debugBoundaryDist = 10.0f;
+    public bool drawSingleVPoint = false;
+    public int vPointIndex = 0;
 
     [Header("Bisectors")]
     public bool drawMidPoints = true;
@@ -114,7 +120,7 @@ public class DebugVoronoi : MonoBehaviour
 
     List<VoronoiShape> InitVShapes(DelaunyMap delMap, List<VoronoiPoint> vPoints)
     {
-        return VoronoiDiagram.FindShapes(vPoints, delMap);
+        return VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist);
     }
 
     private void DrawDelTris(List<DelTriangle> delTris)
@@ -204,46 +210,41 @@ public class DebugVoronoi : MonoBehaviour
                 }
                 else
                 {
-                    Vector2 midPoint = connection.GetMidPoint();
                     Vector2 vPosition = vPoints[connection.owner].position;
-                    Vector2 dir = (midPoint - vPosition).normalized;
+                    Vector2 triMeanAverage = vPoints[connection.owner].delTri.GetTriangle().FindMeanAverage();
+                    Vector2 dir = connection.GetBiSector(vPosition, triMeanAverage);
 
-                    if(!vPoints[connection.owner].isOutsideTri)
-                    {
-                        dir *= -1;
-                    }
-
-                    Vector2 targetLocation = vPosition + dir * 10.0f;
+                    Vector2 targetLocation = vPosition + dir * debugBoundaryDist;
                     Gizmos.DrawLine(vPosition, targetLocation);
                 }
             }
         }
     }
 
-    void DrawShape(VoronoiShape shape, List<VoronoiPoint> vPoints)
+    void DrawShape(VoronoiShape shape)
     {
         Color shapeColour = Color.green;
 
         for (int i = 0; i < shape.points.Count - 1; i++)
         {
             Gizmos.color = shapeColour;
-            Gizmos.DrawLine(vPoints[shape.points[i]].position, vPoints[shape.points[i + 1]].position);
+            Gizmos.DrawLine(shape.points[i], shape.points[i + 1]);
         }
         Gizmos.color = shapeColour;
-        Gizmos.DrawLine(vPoints[shape.points[shape.points.Count - 1]].position, vPoints[shape.points[0]].position);
+        Gizmos.DrawLine(shape.points[shape.points.Count - 1], shape.points[0]);
     }
 
-    void DrawVToCentre(VoronoiShape shape, List<VoronoiPoint> vPoints)
+    void DrawVToCentre(VoronoiShape shape)
     {
         Color centreColour = Color.cyan;
 
         for (int i = 0; i < shape.points.Count - 1; i++)
         {
             Gizmos.color = centreColour;
-            Gizmos.DrawLine(vPoints[shape.points[i]].position, shape.centre);
+            Gizmos.DrawLine(shape.points[i], shape.centre);
         }
         Gizmos.color = centreColour;
-        Gizmos.DrawLine(vPoints[shape.points[shape.points.Count - 1]].position, shape.centre);
+        Gizmos.DrawLine(shape.points[shape.points.Count - 1], shape.centre);
     }
 
     void OnDrawGizmos()
@@ -263,19 +264,44 @@ public class DebugVoronoi : MonoBehaviour
         }
         DelaunyMap delaunyMap = new DelaunyMap(pointList);
 
+        if(drawTargetDelPoint)
+        {
+            Gizmos.color = Color.green;
+            Gizmos.DrawSphere(delaunyMap.delPoints[targetDelPoint].point, 0.5f);
+        }
+
         if(drawDelTriangles)
         {
             DrawDelTris(delaunyMap.delTris);
         }
-        if(drawFirstTriCircle)
+        if(drawTargetTriCircle)
         {
             DrawTriangleCircle(delaunyMap.delTris[triangleIndex].GetTriangle());
         }
 
-            InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
+        Vector2 meanCentre = Vector2.zero;
+        foreach (DelPoint point in delaunyMap.delPoints)
+        {
+            meanCentre += point.point;
+        }
+        meanCentre /= delaunyMap.delPoints.Count;
+
+        if (drawMeanCentre)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawSphere(meanCentre, 0.5f);
+        }
+
+        InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
         if(drawVoronoiPoints)
         {
             DrawVoronoiPoints(drawVPoints);
+
+            if(drawSingleVPoint)
+            {
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawSphere(drawVPoints[vPointIndex].position, 0.4f);
+            }
         }
         if(drawVoronoiEdges)
         {
@@ -304,13 +330,13 @@ public class DebugVoronoi : MonoBehaviour
             if(drawSingleShape)
             {
                 var shape = shapes[drawShapeIndex];
-                DrawShape(shape, drawVPoints);
+                DrawShape(shape);
             }
             else
             {
                 foreach (var shape in shapes)
                 {
-                    DrawShape(shape, drawVPoints);
+                    DrawShape(shape);
                 }
             }
         }
@@ -320,13 +346,13 @@ public class DebugVoronoi : MonoBehaviour
             if(drawSingleShape)
             {
                 var shape = shapes[drawShapeIndex];
-                DrawVToCentre(shape, drawVPoints);
+                DrawVToCentre(shape);
             }
             else
             {
                 foreach (var shape in shapes)
                 {
-                    DrawVToCentre(shape, drawVPoints);
+                    DrawVToCentre(shape);
                 }
             }
         }

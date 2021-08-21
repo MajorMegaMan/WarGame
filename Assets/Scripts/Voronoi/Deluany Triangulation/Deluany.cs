@@ -25,7 +25,7 @@ namespace Voronoi.Deluany
         {
             int triCount = 0;
             List<DelTriangle> delTriangles = new List<DelTriangle>();
-
+        
             for(int a = 0; a < delPoints.Count - 2; a++)
             {
                 for(int b = a + 1; b < delPoints.Count - 1; b++)
@@ -33,7 +33,7 @@ namespace Voronoi.Deluany
                     for(int c = b + 1; c < delPoints.Count; c++)
                     {
                         DelTriangle potentialTri = new DelTriangle(delPoints[a], delPoints[b], delPoints[c]);
-
+        
                         if(ConfirmTriangleAgainstPointList(potentialTri, delPoints, a, b, c))
                         {
                             potentialTri.SetIndex(triCount);
@@ -43,7 +43,7 @@ namespace Voronoi.Deluany
                     }
                 }
             }
-
+        
             // Check connections between all found triangles
             for(int i = 0; i < delTriangles.Count - 1; i++)
             {
@@ -52,7 +52,7 @@ namespace Voronoi.Deluany
                     delTriangles[i].IdentifyConnections(delTriangles[j]);
                 }
             }
-
+        
             return delTriangles;
         }
 
@@ -128,6 +128,17 @@ namespace Voronoi.Deluany
 
             return result;
         }
+
+        public Vector2 CalcMeanCentre()
+        {
+            Vector2 meanCentre = Vector2.zero;
+            foreach (DelPoint point in delPoints)
+            {
+                meanCentre += point.point;
+            }
+            meanCentre /= delPoints.Count;
+            return meanCentre;
+        }
     }
 
     public struct DelPoint
@@ -198,6 +209,21 @@ namespace Voronoi.Deluany
                 return true;
             }
             return false;
+        }
+
+        public Vector2 GetBiSector(Vector2 vPosition, Vector2 meanCentre)
+        {
+            Vector2 midPoint = GetMidPoint();
+            Vector2 dir = (midPoint - vPosition).normalized;
+
+            Vector3 meanToMidDir = (midPoint - meanCentre).normalized;
+
+            if (Vector2.Dot(dir, meanToMidDir) < 0)
+            {
+                dir *= -1;
+            }
+
+            return dir;
         }
     }
 
@@ -377,6 +403,16 @@ namespace Voronoi.Deluany
             hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
 
             return !(hasNeg && hasPos);
+        }
+
+        public Vector2 FindMeanAverage()
+        {
+            Vector2 triMean = Vector2.zero;
+            triMean += pointA;
+            triMean += pointB;
+            triMean += pointC;
+            triMean /= 3;
+            return triMean;
         }
     }
 }
