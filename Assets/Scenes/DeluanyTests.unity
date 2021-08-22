@@ -430,7 +430,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &506249677
 Transform:
   m_ObjectHideFlags: 0
@@ -1191,25 +1191,31 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shapeCount: 0
+  drawDelPoints: 1
   drawTargetDelPoint: 0
-  targetDelPoint: 1
+  targetDelPoint: 19
   drawDelTriangles: 0
   drawTargetTriCircle: 0
   triangleIndex: 0
   drawMeanCentre: 0
   drawDelPointConnections: 0
   drawVoronoiPoints: 1
-  drawVoronoiEdges: 1
-  debugBoundaryDist: 100
+  drawVoronoiEdges: 0
+  debugBoundaryDist: 5
   drawSingleVPoint: 0
-  vPointIndex: 0
+  vPointIndex: 22
   drawMidPoints: 0
   drawPerpindicular: 1
   drawShapes: 1
   drawVToCentre: 0
-  drawSingleShape: 1
-  drawShapeIndex: 0
-  drawNeighbourConnections: 1
+  drawSingleShape: 0
+  drawShapeIndex: 6
+  drawNeighbourConnections: 0
+  useRandomPoints: 1
+  seed: 0
+  mapWidth: 10
+  mapHeight: 10
+  pointcount: 20
 --- !u!4 &1244379631
 Transform:
   m_ObjectHideFlags: 0

@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Voronoi;
 
 namespace Voronoi.Deluany
 {
@@ -237,6 +238,11 @@ namespace Voronoi.Deluany
                 return true;
             }
             return false;
+        }
+
+        public Vector2 GetBiSector(VoronoiPoint vPoint)
+        {
+            return GetBiSector(vPoint.position, vPoint.delTri.GetTriangle().FindMeanAverage());
         }
 
         public Vector2 GetBiSector(Vector2 vPosition, Vector2 meanCentre)

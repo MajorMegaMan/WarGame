@@ -263,41 +263,9 @@ namespace Voronoi
 
                 foreach (VoronoiPoint vPoint in delVPoint.connectedVPoints)
                 {
-                    int vPointEmptyCount = 0;
-                    foreach (Connection connect in vPoint.connectedPoints)
+                    if(vPoint.hasEmptyConnection)
                     {
-                        if(connect.isEmpty)
-                        {
-                            vPointEmptyCount++;
-                        }
-                    }
-
-                    switch (vPointEmptyCount)
-                    {
-                        case 0:
-                            {
-                                // This point does not lie on the outside of the voronoi pattern
-                                break;
-                            }
-                        case 1:
-                            {
-                                // This Point does lie on the outside of the voronoi pattern
-                                emptyPoints.Add(vPoint);
-                                break;
-                            }
-                        case 2:
-                            {
-                                // This Point is connected to 2 deluanay triangles and will there for be used in 2 outside shapes
-                                emptyPoints.Add(vPoint);
-                                break;
-                            }
-                        case 3:
-                            {
-                                // This is the only Voronoi Point in the diagram
-                                Debug.LogWarning("Shouldn't be here, this is already checked.");
-                                emptyPoints.Add(vPoint);
-                                break;
-                            }
+                        emptyPoints.Add(vPoint);
                     }
                 }
 
@@ -310,9 +278,40 @@ namespace Voronoi
                         // They are not neighbour which means we can extend the shape outwards as it lies on the outside of the Voronoi pattern
                         foreach (var vPoint in emptyPoints)
                         {
+                            List<Connection> emptyConnections = new List<Connection>();
+
                             foreach (Connection connect in vPoint.connectedPoints)
                             {
-                                FindBoundaryPoint(connect, vPoint, debugBoundaryDist);
+                                if(connect.isEmpty)
+                                {
+                                    emptyConnections.Add(connect);
+                                }
+                                
+                            }
+
+                            if (emptyConnections.Count == 1)
+                            {
+                                FindBoundaryPoint(emptyConnections[0], vPoint, debugBoundaryDist);
+                            }
+                            else if (emptyConnections.Count == 2)
+                            {
+                                // Need to find the connection that belongs to this shape
+                                // This should be the one that is pointing towards the centre closer
+                                Vector2 vToDel = (delVPoint.delPoint.point - vPoint.position).normalized;
+
+                                Vector2 firstBiSector = emptyConnections[0].GetBiSector(vPoint);
+                                float firstDot = Vector2.Dot(vToDel, firstBiSector.normalized);
+
+                                Vector2 secondBiSector = emptyConnections[1].GetBiSector(vPoint);
+                                float secondDot = Vector2.Dot(vToDel, secondBiSector.normalized);
+
+                                Connection towardsShape = emptyConnections[0];
+                                if(firstDot < secondDot)
+                                {
+                                    towardsShape = emptyConnections[1];
+                                }
+
+                                FindBoundaryPoint(towardsShape, vPoint, debugBoundaryDist);
                             }
                         }
                     }
@@ -329,8 +328,7 @@ namespace Voronoi
             }
 
             Vector2 vPosition = vPoint.position;
-            Vector2 triMeanAverage = vPoint.delTri.GetTriangle().FindMeanAverage();
-            Vector2 dir = connection.GetBiSector(vPosition, triMeanAverage);
+            Vector2 dir = connection.GetBiSector(vPoint);
 
             points.Add(vPosition + dir * debugBoundaryDist);
         }

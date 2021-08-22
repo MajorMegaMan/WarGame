@@ -4,7 +4,7 @@ using UnityEngine;
 using Voronoi;
 using Voronoi.Deluany;
 
-using VShape = System.Collections.Generic.List<UnityEngine.Vector2>;
+using PointList = System.Collections.Generic.List<UnityEngine.Vector2>;
 
 public class DebugVoronoi : MonoBehaviour
 {
@@ -12,11 +12,12 @@ public class DebugVoronoi : MonoBehaviour
     List<DelTriangle> delTriangles;
     List<VoronoiPoint> vPoints;
 
-    List<VShape> vShapes;
+    List<PointList> vShapes;
 
     public int shapeCount = 0;
 
     [Header("Deluanay")]
+    public bool drawDelPoints = true;
     public bool drawTargetDelPoint = true;
     public int targetDelPoint = 0;
     public bool drawDelTriangles = true;
@@ -45,6 +46,15 @@ public class DebugVoronoi : MonoBehaviour
 
     public List<VoronoiShape> debugShapes;
 
+    [Header("Random Values")]
+    public bool useRandomPoints = false;
+    public int seed = 0;
+
+    public int mapWidth = 10;
+    public int mapHeight = 10;
+
+    public int pointcount = 10;
+
     void Awake()
     {
         InitPoints(out points);
@@ -52,7 +62,7 @@ public class DebugVoronoi : MonoBehaviour
         InitVoronoi(out vPoints, delTriangles);
 
         // Create deluany map
-        VShape pointList = new VShape();
+        PointList pointList = new PointList();
         foreach (var pointTransform in points)
         {
             pointList.Add(pointTransform.position);
@@ -213,8 +223,7 @@ public class DebugVoronoi : MonoBehaviour
                 else
                 {
                     Vector2 vPosition = vPoints[connection.owner].position;
-                    Vector2 triMeanAverage = vPoints[connection.owner].delTri.GetTriangle().FindMeanAverage();
-                    Vector2 dir = connection.GetBiSector(vPosition, triMeanAverage);
+                    Vector2 dir = connection.GetBiSector(vPoints[connection.owner]);
 
                     Vector2 targetLocation = vPosition + dir * debugBoundaryDist;
                     Gizmos.DrawLine(vPosition, targetLocation);
@@ -259,11 +268,42 @@ public class DebugVoronoi : MonoBehaviour
         }
 
         // Create deluany map
-        VShape pointList = new VShape();
-        foreach(var pointTransform in drawPoints)
+        PointList pointList = new PointList();
+
+        if(!useRandomPoints)
         {
-            pointList.Add(pointTransform.position);
+            foreach (var pointTransform in drawPoints)
+            {
+                pointList.Add(pointTransform.position);
+            }
         }
+        else
+        {
+            Random.InitState(seed);
+
+            float halfWidth = (float)mapWidth / 2.0f;
+            float halfHeight = (float)mapHeight / 2.0f;
+
+            for (int i = 0; i < pointcount; i++)
+            {
+                Vector2 newPoint = Vector2.zero;
+
+                newPoint.x = Random.Range(-halfWidth, halfWidth);
+                newPoint.y = Random.Range(-halfHeight, halfHeight);
+
+                pointList.Add(newPoint);
+            }
+        }
+
+        if(drawDelPoints)
+        {
+            Gizmos.color = Color.red;
+            foreach(var point in pointList)
+            {
+                Gizmos.DrawSphere(point, 0.4f);
+            }
+        }
+
         DelaunyMap delaunyMap = new DelaunyMap(pointList);
 
         if(drawTargetDelPoint)
@@ -403,6 +443,30 @@ public class DebugVoronoi : MonoBehaviour
                     }
                 }
             }
+        }
+    }
+
+    private void OnValidate()
+    {
+        if(useRandomPoints)
+        {
+            if (mapWidth < 1)
+            {
+                mapWidth = 1;
+            }
+            if (mapHeight < 1)
+            {
+                mapHeight = 1;
+            }
+
+            if (pointcount < 3)
+            {
+                pointcount = 3;
+            }
+        }
+        if(debugBoundaryDist <= 0)
+        {
+            debugBoundaryDist = 0.0001f;
         }
     }
 }
