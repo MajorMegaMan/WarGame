@@ -151,11 +151,17 @@ namespace Voronoi
         int debugIndex = 0;
         public Vector2 centre = Vector2.zero;
         public List<Vector2> points = new List<Vector2>();
+        public List<int> neighbours = new List<int>();
 
         public VoronoiShape(DelToVPoint delVPoint, float debugBoundaryDist)
         {
             debugIndex = delVPoint.delPoint.index;
             centre = delVPoint.delPoint.point;
+
+            foreach(DelPoint neighbour in delVPoint.delPoint.connectedDelPoints)
+            {
+                neighbours.Add(neighbour.index);
+            }
 
             int hasEmptyConnectionCount = 0;
             foreach (VoronoiPoint vPoint in delVPoint.connectedVPoints)

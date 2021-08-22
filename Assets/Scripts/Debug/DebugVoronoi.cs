@@ -23,6 +23,7 @@ public class DebugVoronoi : MonoBehaviour
     public bool drawTargetTriCircle = true;
     public int triangleIndex = 0;
     public bool drawMeanCentre = true;
+    public bool drawDelPointConnections = false;
 
     [Header("Voronoi")]
     public bool drawVoronoiPoints = true;
@@ -40,6 +41,7 @@ public class DebugVoronoi : MonoBehaviour
     public bool drawVToCentre = true;
     public bool drawSingleShape = false;
     public int drawShapeIndex = 0;
+    public bool drawNeighbourConnections = false;
 
     public List<VoronoiShape> debugShapes;
 
@@ -292,6 +294,29 @@ public class DebugVoronoi : MonoBehaviour
             Gizmos.DrawSphere(meanCentre, 0.5f);
         }
 
+        if(drawDelPointConnections)
+        {
+            Gizmos.color = Color.red;
+            if(drawTargetDelPoint)
+            {
+                DelPoint delPoint = delaunyMap.delPoints[targetDelPoint];
+                foreach (DelPoint targetConnect in delPoint.connectedDelPoints)
+                {
+                    Gizmos.DrawLine(delPoint.point, targetConnect.point);
+                }
+            }
+            else
+            {
+                foreach(DelPoint delPoint in delaunyMap.delPoints)
+                {
+                    foreach(DelPoint targetConnect in delPoint.connectedDelPoints)
+                    {
+                        Gizmos.DrawLine(delPoint.point, targetConnect.point);
+                    }
+                }
+            }
+        }
+
         InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
         if(drawVoronoiPoints)
         {
@@ -353,6 +378,29 @@ public class DebugVoronoi : MonoBehaviour
                 foreach (var shape in shapes)
                 {
                     DrawVToCentre(shape);
+                }
+            }
+        }
+
+        if (drawNeighbourConnections)
+        {
+            Gizmos.color = Color.red;
+            if (drawSingleShape)
+            {
+                var shape = shapes[drawShapeIndex];
+                foreach (int targetConnect in shape.neighbours)
+                {
+                    Gizmos.DrawLine(shape.centre, shapes[targetConnect].centre);
+                }
+            }
+            else
+            {
+                foreach (var shape in shapes)
+                {
+                    foreach (int targetConnect in shape.neighbours)
+                    {
+                        Gizmos.DrawLine(shape.centre, shapes[targetConnect].centre);
+                    }
                 }
             }
         }

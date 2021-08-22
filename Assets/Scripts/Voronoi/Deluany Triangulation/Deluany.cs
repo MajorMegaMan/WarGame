@@ -52,7 +52,13 @@ namespace Voronoi.Deluany
                     delTriangles[i].IdentifyConnections(delTriangles[j]);
                 }
             }
-        
+
+            // Connect del Points together
+            foreach(DelTriangle delTri in delTriangles)
+            {
+                delTri.ConnectDelPoints();
+            }
+
             return delTriangles;
         }
 
@@ -139,17 +145,28 @@ namespace Voronoi.Deluany
             meanCentre /= delPoints.Count;
             return meanCentre;
         }
+
+        void ConnectDelPoints()
+        {
+            foreach(DelTriangle delTri in delTris)
+            {
+                delTri.ConnectDelPoints();
+            }
+        }
     }
 
-    public struct DelPoint
+    public class DelPoint
     {
         public int index { get; private set; }
         public Vector2 point;
+
+        public List<DelPoint> connectedDelPoints;
 
         public DelPoint(Vector2 point, int index)
         {
             this.point = point;
             this.index = index;
+            connectedDelPoints = new List<DelPoint>();
         }
 
         public bool IsInTriangle(DelTriangle delTri)
@@ -159,6 +176,17 @@ namespace Voronoi.Deluany
                 return true;
             }
             return false;
+        }
+
+        public void ConnectToDelPoint(DelPoint target)
+        {
+            if(connectedDelPoints.Contains(target))
+            {
+                // If the target is already in the list don't add it
+                return;
+            }
+
+            connectedDelPoints.Add(target);
         }
     }
 
@@ -227,7 +255,7 @@ namespace Voronoi.Deluany
         }
     }
 
-    public struct DelTriangle
+    public class DelTriangle
     {
         public int index;
 
@@ -302,6 +330,18 @@ namespace Voronoi.Deluany
                 }
             }
             return null;
+        }
+
+        public void ConnectDelPoints()
+        {
+            pointA.ConnectToDelPoint(pointB);
+            pointA.ConnectToDelPoint(pointC);
+
+            pointB.ConnectToDelPoint(pointA);
+            pointB.ConnectToDelPoint(pointC);
+
+            pointC.ConnectToDelPoint(pointA);
+            pointC.ConnectToDelPoint(pointB);
         }
     }
 
