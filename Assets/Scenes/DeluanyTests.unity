@@ -1193,10 +1193,11 @@ MonoBehaviour:
   shapeCount: 0
   drawTargetDelPoint: 0
   targetDelPoint: 1
-  drawDelTriangles: 1
+  drawDelTriangles: 0
   drawTargetTriCircle: 0
   triangleIndex: 0
-  drawMeanCentre: 1
+  drawMeanCentre: 0
+  drawDelPointConnections: 0
   drawVoronoiPoints: 1
   drawVoronoiEdges: 1
   debugBoundaryDist: 100
@@ -1206,8 +1207,9 @@ MonoBehaviour:
   drawPerpindicular: 1
   drawShapes: 1
   drawVToCentre: 0
-  drawSingleShape: 0
+  drawSingleShape: 1
   drawShapeIndex: 0
+  drawNeighbourConnections: 1
 --- !u!4 &1244379631
 Transform:
   m_ObjectHideFlags: 0

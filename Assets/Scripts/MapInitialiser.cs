@@ -8,41 +8,40 @@ public class MapInitialiser : MonoBehaviour
     public CountryRegion countryRegionPrefab;
 
     List<CountryRegion> m_countryRegionList;
-    CountryShape[] countryShapes;
 
-    [System.Serializable]
-    public struct CountryShape
-    {
-        public CountryRegion countryRegion { get; set; }
-        public Transform[] points;
-    }
-
-    public CountryShape[] shapes;
+    List<VoronoiShape> vShapes;
 
     private void Awake()
     {
+        // Get Point List
+        DebugCircle[] circles = FindObjectsOfType<DebugCircle>();
+        List<Vector2> pointList = new List<Vector2>();
+        foreach (DebugCircle circle in circles)
+        {
+            pointList.Add(circle.transform.position);
+        }
+
+        // Create Voronoi Diagram
+        VoronoiDiagram vDiagram = new VoronoiDiagram(pointList, 100.0f);
+        vShapes = vDiagram.vShapes;
+
+        // Initialise Country List
         m_countryRegionList = new List<CountryRegion>();
-        
-        for(int i = 0; i < shapes.Length; i++)
+        for (int i = 0; i < vShapes.Count; i++)
         {
             CountryRegion newCountry = Instantiate<CountryRegion>(countryRegionPrefab);
             m_countryRegionList.Add(newCountry);
-            shapes[i].countryRegion = newCountry;
         }
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        for(int i = 0; i < shapes.Length; i++)
+        // Assigin Shapes to country region
+        for(int i = 0; i < m_countryRegionList.Count; i++)
         {
-            shapes[i].countryRegion.transform.position = Vector3.zero;
-            Vector3[] positions = new Vector3[shapes[i].points.Length];
-            for (int j = 0; j < shapes[i].points.Length; j++)
-            {
-                positions[j] = shapes[i].points[j].position;
-            }
-            shapes[i].countryRegion.InitialiseShape(positions);
+            CountryRegion countryRegion = m_countryRegionList[i];
+            countryRegion.InitialiseShape(vShapes[i], m_countryRegionList);
         }
     }
 
