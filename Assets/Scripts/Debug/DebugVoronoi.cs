@@ -22,6 +22,7 @@ public class DebugVoronoi : MonoBehaviour
     public bool drawTargetDelPoint = true;
     public int targetDelPoint = 0;
     public bool drawDelTriangles = true;
+    public bool drawTargetDelTriangle = true;
     public bool drawTargetTriCircle = true;
     public int triangleIndex = 0;
     public bool drawMeanCentre = true;
@@ -136,15 +137,15 @@ public class DebugVoronoi : MonoBehaviour
         return VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist);
     }
 
+    void DrawTri(Triangle tri)
+    {
+        Gizmos.DrawLine(tri.pointA, tri.pointB);
+        Gizmos.DrawLine(tri.pointB, tri.pointC);
+        Gizmos.DrawLine(tri.pointC, tri.pointA);
+    }
+
     private void DrawDelTris(List<DelTriangle> delTris)
     {
-        void DrawTri(Triangle tri)
-        {
-            Gizmos.DrawLine(tri.pointA, tri.pointB);
-            Gizmos.DrawLine(tri.pointB, tri.pointC);
-            Gizmos.DrawLine(tri.pointC, tri.pointA);
-        }
-
         foreach (var delTri in delTris)
         {
             Triangle tempTri = delTri.GetTriangle();
@@ -317,7 +318,14 @@ public class DebugVoronoi : MonoBehaviour
         {
             DrawDelTris(delaunyMap.delTris);
         }
-        if(drawTargetTriCircle)
+
+        if (drawTargetDelTriangle)
+        {
+            Gizmos.color = Color.yellow;
+            DrawTri(delaunyMap.delTris[triangleIndex].GetTriangle());
+        }
+
+        if (drawTargetTriCircle)
         {
             DrawTriangleCircle(delaunyMap.delTris[triangleIndex].GetTriangle());
         }

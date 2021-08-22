@@ -354,6 +354,7 @@ namespace Voronoi.Deluany
         }
     }
 
+    [System.Serializable]
     public struct Triangle
     {
         public Vector2 pointA;
@@ -388,34 +389,72 @@ namespace Voronoi.Deluany
             return Vector3.Dot(cross, normal) < 0;
         }
 
+        struct DVector2
+        {
+            public double x;
+            public double y;
+
+            public double magnitude { get { return System.Math.Sqrt(x * x + y * y); } }
+
+            public DVector2(Vector2 point)
+            {
+                this.x = point.x;
+                this.y = point.y;
+            }
+
+            public static DVector2 operator -(DVector2 lhs, DVector2 rhs)
+            {
+                lhs.x -= rhs.x;
+                lhs.y -= rhs.y;
+                return lhs;
+            }
+
+            public static double Dot(DVector2 lhs, DVector2 rhs)
+            {
+                return lhs.x * rhs.x + lhs.y * rhs.y;
+            }
+        }
+
         public Vector2 CalcCircumcentre()
         {
-            Vector2 aTob = pointB - pointA;
-            Vector2 bToc = pointC - pointB;
-            Vector2 cToa = pointA - pointC;
+            DVector2 pointA = new DVector2(this.pointA);
+            DVector2 pointB = new DVector2(this.pointB);
+            DVector2 pointC = new DVector2(this.pointC);
 
-            Vector2 aToc = pointC - pointA;
-            Vector2 bToa = pointA - pointB;
-            Vector2 cTob = pointB - pointC;
+            DVector2 aTob = pointB - pointA;
+            DVector2 bToc = pointC - pointB;
+            DVector2 cToa = pointA - pointC;
+
+            DVector2 aToc = pointC - pointA;
+            DVector2 bToa = pointA - pointB;
+            DVector2 cTob = pointB - pointC;
 
             //float angleA = Vector2.Angle(aTob, aToc);
             //float angleB = Vector2.Angle(bToc, bToa);
             //float angleC = Vector2.Angle(cToa, cTob);
 
-            float angleA = Mathf.Acos(Vector3.Dot(aTob, aToc) / (aTob.magnitude * aToc.magnitude));
-            float angleB = Mathf.Acos(Vector3.Dot(bToc, bToa) / (bToc.magnitude * bToa.magnitude));
-            float angleC = Mathf.Acos(Vector3.Dot(cToa, cTob) / (cToa.magnitude * cTob.magnitude));
+            double angleA = System.Math.Acos(DVector2.Dot(aTob, aToc) / (aTob.magnitude * aToc.magnitude));
+            double angleB = System.Math.Acos(DVector2.Dot(bToc, bToa) / (bToc.magnitude * bToa.magnitude));
+            double angleC = System.Math.Acos(DVector2.Dot(cToa, cTob) / (cToa.magnitude * cTob.magnitude));
 
 
-            float sin2A = Mathf.Sin(2 * angleA);
-            float sin2B = Mathf.Sin(2 * angleB);
-            float sin2C = Mathf.Sin(2 * angleC);
+            double sin2A = System.Math.Sin(2 * angleA);
+            double sin2B = System.Math.Sin(2 * angleB);
+            double sin2C = System.Math.Sin(2 * angleC);
 
+            double circumX = 0.0;
+            double circumY = 0.0;
+
+            circumX = (pointA.x * sin2A) + (pointB.x * sin2B) + (pointC.x * sin2C);
+            circumY = (pointA.y * sin2A) + (pointB.y * sin2B) + (pointC.y * sin2C);
+
+            circumX /= sin2A + sin2B + sin2C;
+            circumY /= sin2A + sin2B + sin2C;
+
+            //circumcentre /= sin2A + sin2B + sin2C;
             Vector2 circumcentre = Vector2.zero;
-            circumcentre.x = (pointA.x * sin2A) + (pointB.x * sin2B) + (pointC.x * sin2C);
-            circumcentre.y = (pointA.y * sin2A) + (pointB.y * sin2B) + (pointC.y * sin2C);
-
-            circumcentre /= sin2A + sin2B + sin2C;
+            circumcentre.x = (float)circumX;
+            circumcentre.y = (float)circumY;
 
             return circumcentre;
         }
