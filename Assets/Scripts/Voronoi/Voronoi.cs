@@ -11,9 +11,9 @@ namespace Voronoi
         public List<VoronoiShape> vShapes;
         public DelaunyMap delMap;
 
-        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist)
+        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float maxRadius = float.PositiveInfinity)
         {
-            delMap = new DelaunyMap(points);
+            delMap = new DelaunyMap(points, maxRadius);
 
             vPoints = CreateVPoints(delMap);
             vShapes = FindShapes(vPoints, delMap, debugBoundaryDist);

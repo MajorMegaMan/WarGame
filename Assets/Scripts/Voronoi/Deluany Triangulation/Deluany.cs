@@ -10,7 +10,7 @@ namespace Voronoi.Deluany
         public List<DelPoint> delPoints;
         public List<DelTriangle> delTris;
 
-        public DelaunyMap(List<Vector2> points)
+        public DelaunyMap(List<Vector2> points, float maxRadius = float.PositiveInfinity)
         {
             delPoints = new List<DelPoint>();
             delTris = new List<DelTriangle>();
@@ -19,10 +19,10 @@ namespace Voronoi.Deluany
             {
                 delPoints.Add(new DelPoint(points[i], i));
             }
-            delTris = CalcTriangles(delPoints);
+            delTris = CalcTriangles(delPoints, maxRadius);
         }
 
-        public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints)
+        public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints, float maxRadius = float.PositiveInfinity)
         {
             int triCount = 0;
             List<DelTriangle> delTriangles = new List<DelTriangle>();
@@ -34,12 +34,15 @@ namespace Voronoi.Deluany
                     for(int c = b + 1; c < delPoints.Count; c++)
                     {
                         DelTriangle potentialTri = new DelTriangle(delPoints[a], delPoints[b], delPoints[c]);
-        
-                        if(ConfirmTriangleAgainstPointList(potentialTri, delPoints, a, b, c))
+
+                        if(potentialTri.GetTriangle().CalcCircumcentreRadius() < maxRadius)
                         {
-                            potentialTri.SetIndex(triCount);
-                            triCount++;
-                            delTriangles.Add(potentialTri);
+                            if (ConfirmTriangleAgainstPointList(potentialTri, delPoints, a, b, c))
+                            {
+                                potentialTri.SetIndex(triCount);
+                                triCount++;
+                                delTriangles.Add(potentialTri);
+                            }
                         }
                     }
                 }

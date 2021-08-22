@@ -1191,28 +1191,29 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   shapeCount: 0
+  maxCircumCircleRadius: 100
   drawDelPoints: 1
-  drawTargetDelPoint: 0
-  targetDelPoint: 19
-  drawDelTriangles: 0
-  drawTargetTriCircle: 0
-  triangleIndex: 0
+  drawTargetDelPoint: 1
+  targetDelPoint: 2
+  drawDelTriangles: 1
+  drawTargetTriCircle: 1
+  triangleIndex: 8
   drawMeanCentre: 0
   drawDelPointConnections: 0
   drawVoronoiPoints: 1
-  drawVoronoiEdges: 0
-  debugBoundaryDist: 5
-  drawSingleVPoint: 0
-  vPointIndex: 22
+  drawVoronoiEdges: 1
+  debugBoundaryDist: 10
+  drawSingleVPoint: 1
+  vPointIndex: 8
   drawMidPoints: 0
   drawPerpindicular: 1
   drawShapes: 1
   drawVToCentre: 0
   drawSingleShape: 0
-  drawShapeIndex: 6
+  drawShapeIndex: 2
   drawNeighbourConnections: 0
   useRandomPoints: 1
-  seed: 0
+  seed: 1337
   mapWidth: 10
   mapHeight: 10
   pointcount: 20

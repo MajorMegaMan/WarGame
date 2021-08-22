@@ -17,6 +17,7 @@ public class DebugVoronoi : MonoBehaviour
     public int shapeCount = 0;
 
     [Header("Deluanay")]
+    public float maxCircumCircleRadius = float.PositiveInfinity;
     public bool drawDelPoints = true;
     public bool drawTargetDelPoint = true;
     public int targetDelPoint = 0;
@@ -67,7 +68,7 @@ public class DebugVoronoi : MonoBehaviour
         {
             pointList.Add(pointTransform.position);
         }
-        DelaunyMap delaunyMap = new DelaunyMap(pointList);
+        DelaunyMap delaunyMap = new DelaunyMap(pointList, maxCircumCircleRadius);
 
         debugShapes = InitVShapes(delaunyMap, vPoints);
         shapeCount = debugShapes.Count;
@@ -304,7 +305,7 @@ public class DebugVoronoi : MonoBehaviour
             }
         }
 
-        DelaunyMap delaunyMap = new DelaunyMap(pointList);
+        DelaunyMap delaunyMap = new DelaunyMap(pointList, maxCircumCircleRadius);
 
         if(drawTargetDelPoint)
         {
@@ -467,6 +468,10 @@ public class DebugVoronoi : MonoBehaviour
         if(debugBoundaryDist <= 0)
         {
             debugBoundaryDist = 0.0001f;
+        }
+        if(maxCircumCircleRadius <= 0)
+        {
+            maxCircumCircleRadius = 0.0001f;
         }
     }
 }
