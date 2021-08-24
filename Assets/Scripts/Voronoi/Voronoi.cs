@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Voronoi.Deluany;
+using Voronoi.Helpers;
 
 namespace Voronoi
 {
@@ -11,12 +12,20 @@ namespace Voronoi
         public List<VoronoiShape> vShapes;
         public DelaunyMap delMap;
 
-        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float maxRadius = float.PositiveInfinity)
+        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
+        {
+            delMap = new DelaunyMap(points);
+
+            vPoints = CreateVPoints(delMap);
+            vShapes = FindShapes(vPoints, delMap, debugBoundaryDist, boundaryWidth, boundaryHeight);
+        }
+
+        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight, float maxRadius = float.PositiveInfinity)
         {
             delMap = new DelaunyMap(points, maxRadius);
 
             vPoints = CreateVPoints(delMap);
-            vShapes = FindShapes(vPoints, delMap, debugBoundaryDist);
+            vShapes = FindShapes(vPoints, delMap, debugBoundaryDist, boundaryWidth, boundaryHeight);
         }
 
         public static List<VoronoiPoint> CreateVPoints(DelaunyMap delMap)
@@ -78,23 +87,23 @@ namespace Voronoi
             return result;
         }
 
-        public static List<VoronoiShape> FindShapes(List<DelToVPoint> delToVPoints, float debugBoundaryDist)
+        public static List<VoronoiShape> FindShapes(List<DelToVPoint> delToVPoints, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
         {
             List<VoronoiShape> shapes = new List<VoronoiShape>();
 
             foreach (var delToV in delToVPoints)
             {
-                VoronoiShape tempShape = new VoronoiShape(delToV, debugBoundaryDist);
+                VoronoiShape tempShape = new VoronoiShape(delToV, debugBoundaryDist, boundaryWidth, boundaryHeight);
                 shapes.Add(tempShape);
             }
 
             return shapes;
         }
 
-        public static List<VoronoiShape> FindShapes(List<VoronoiPoint> vPoints, DelaunyMap delMap, float debugBoundaryDist)
+        public static List<VoronoiShape> FindShapes(List<VoronoiPoint> vPoints, DelaunyMap delMap, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
         {
             var delToVPoints = FindPointShapeList(vPoints, delMap);
-            return FindShapes(delToVPoints, debugBoundaryDist);
+            return FindShapes(delToVPoints, debugBoundaryDist, boundaryWidth, boundaryHeight);
         }
     }
 
@@ -152,35 +161,33 @@ namespace Voronoi
         public Vector2 centre = Vector2.zero;
         public List<Vector2> points = new List<Vector2>();
         public List<int> neighbours = new List<int>();
+        public bool isBoundaryShape = false;
 
-        public VoronoiShape(DelToVPoint delVPoint, float debugBoundaryDist)
+        public VoronoiShape(DelToVPoint delVPoint, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
         {
             debugIndex = delVPoint.delPoint.index;
             centre = delVPoint.delPoint.point;
 
-            foreach(DelPoint neighbour in delVPoint.delPoint.connectedDelPoints)
+            foreach (DelPoint neighbour in delVPoint.delPoint.connectedDelPoints)
             {
                 neighbours.Add(neighbour.index);
             }
 
-            int hasEmptyConnectionCount = 0;
             foreach (VoronoiPoint vPoint in delVPoint.connectedVPoints)
             {
                 points.Add(vPoint.position);
-                if(vPoint.hasEmptyConnection)
-                {
-                    hasEmptyConnectionCount++;
-                }
             }
 
             FindPotentialBoundaryPoints(delVPoint, debugBoundaryDist);
 
             GiftWrap();
+
+            CookieCutter.CookieCutterShape(ref points, boundaryWidth, boundaryHeight);
         }
 
         void FindPotentialBoundaryPoints(DelToVPoint delVPoint, float debugBoundaryDist)
         {
-            if(delVPoint.connectedVPoints.Count == 1)
+            if (delVPoint.connectedVPoints.Count == 1)
             {
                 VoronoiPoint vPoint = delVPoint.connectedVPoints[0];
                 List<Connection> emptyConnections = new List<Connection>();
@@ -192,23 +199,23 @@ namespace Voronoi
                     }
                 }
 
-                if(emptyConnections.Count == 2)
+                if (emptyConnections.Count == 2)
                 {
-                    foreach(Connection emptyConnect in emptyConnections)
+                    foreach (Connection emptyConnect in emptyConnections)
                     {
                         FindBoundaryPoint(emptyConnect, vPoint, debugBoundaryDist);
                     }
                 }
-                else if(emptyConnections.Count == 3)
+                else if (emptyConnections.Count == 3)
                 {
                     // This is the only vPoint in the diagram
 
                     // need to 2 find connections that point towards outside
-                    foreach(Connection connect in emptyConnections)
+                    foreach (Connection connect in emptyConnections)
                     {
                         float connectDot = GetDotCompareValue(connect, vPoint, delVPoint);
                         // if the dot product between 
-                        if(connectDot < 0)
+                        if (connectDot < 0)
                         {
                             FindBoundaryPoint(connect, vPoint, debugBoundaryDist);
                         }
@@ -224,13 +231,13 @@ namespace Voronoi
                     List<Connection> emptyConnections = new List<Connection>();
                     foreach (Connection connect in vPoint.connectedPoints)
                     {
-                        if(connect.isEmpty)
+                        if (connect.isEmpty)
                         {
                             emptyConnections.Add(connect);
                         }
                     }
 
-                    if(emptyConnections.Count > 1)
+                    if (emptyConnections.Count > 1)
                     {
                         // need to find connection that points towards outside
                         Connection target = emptyConnections[0];
@@ -240,7 +247,7 @@ namespace Voronoi
                         {
                             Connection currentConnection = emptyConnections[i];
                             float currentDot = GetDotCompareValue(currentConnection, vPoint, delVPoint);
-                            if(currentDot < lowestDot)
+                            if (currentDot < lowestDot)
                             {
                                 target = currentConnection;
                                 lowestDot = currentDot;
@@ -263,14 +270,14 @@ namespace Voronoi
 
                 foreach (VoronoiPoint vPoint in delVPoint.connectedVPoints)
                 {
-                    if(vPoint.hasEmptyConnection)
+                    if (vPoint.hasEmptyConnection)
                     {
                         emptyPoints.Add(vPoint);
                     }
                 }
 
                 // Shapes on the outside can only ever have 2 V points with empty Connections
-                if(emptyPoints.Count == 2)
+                if (emptyPoints.Count == 2)
                 {
                     // Check if emptyPoints are not neighbours with each other
                     if (!emptyPoints[0].IsNeighbour(emptyPoints[1].index))
@@ -282,11 +289,11 @@ namespace Voronoi
 
                             foreach (Connection connect in vPoint.connectedPoints)
                             {
-                                if(connect.isEmpty)
+                                if (connect.isEmpty)
                                 {
                                     emptyConnections.Add(connect);
                                 }
-                                
+
                             }
 
                             if (emptyConnections.Count == 1)
@@ -306,7 +313,7 @@ namespace Voronoi
                                 float secondDot = Vector2.Dot(vToDel, secondBiSector.normalized);
 
                                 Connection towardsShape = emptyConnections[0];
-                                if(firstDot < secondDot)
+                                if (firstDot < secondDot)
                                 {
                                     towardsShape = emptyConnections[1];
                                 }
@@ -321,11 +328,13 @@ namespace Voronoi
 
         void FindBoundaryPoint(Connection connection, VoronoiPoint vPoint, float debugBoundaryDist)
         {
-            if(!connection.isEmpty)
+            if (!connection.isEmpty)
             {
                 // Don't need to bother find a point as this connection leads to another voronoi point
                 return;
             }
+
+            isBoundaryShape = true;
 
             Vector2 vPosition = vPoint.position;
             Vector2 dir = connection.GetBiSector(vPoint);
@@ -347,72 +356,7 @@ namespace Voronoi
 
         void GiftWrap()
         {
-            // Check shape has enough points
-            if (points.Count < 3)
-            {
-                Debug.LogError("DelPoint: " + debugIndex + " | This shape shouldn't exist. There is less than 3 vertices");
-                return;
-            }
-
-            // Initialise hull
-            List<Vector2> hull = new List<Vector2>();
-
-            // Find Left most point
-            int leftMost = 0; // index of points, not vPoints
-            for (int i = 1; i < points.Count; i++)
-            {
-                if (points[i].x < points[leftMost].x)
-                {
-                    leftMost = i;
-                }
-            }
-
-            // start from leftmost, keep moving counter clockwise until reach start position again
-            int p = leftMost;
-            int q = 0;
-            do
-            {
-                // Add current to hull result
-                hull.Add(points[p]);
-
-                // Search for a point 'q' such that orientation(p, x,
-                // q) is counterclockwise for all points 'x'. The idea
-                // is to keep track of last visited most counterclock-
-                // wise point in q. If any point 'i' is more counterclock-
-                // wise than q, then update q.
-                q = (p + 1) % points.Count;
-                for (int i = 0; i < points.Count; i++)
-                {
-                    // If i is more counterclockwise than current q, then
-                    // update q
-                    if (Orientation(points[p], points[i], points[q]) == 2)
-                    {
-                        q = i;
-                    }
-                }
-
-                // Now q is the most counterclockwise with respect to p
-                // Set p as q for next iteration, so that q is added to
-                // result 'hull'
-                p = q;
-            } while (p != leftMost);
-
-            // Finish result
-            points = hull;
-        }
-
-        // Finds winding order or if they are co linear of any 3 given points.
-        // 0 = p, q, r are co linear (a straight line)
-        // 1 = ClockWise Triangle
-        // 2 = Counter-clockWise Triangle
-        static int Orientation(Vector2 p, Vector2 q, Vector2 r)
-        {
-            float val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-            if (val == 0)
-            {
-                return 0; // co linear
-            }
-            return (val > 0) ? 1 : 2;
+            VMaths.GiftWrap(ref points);
         }
     }
 }

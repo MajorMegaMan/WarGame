@@ -9,8 +9,6 @@ public class MapInitialiser : MonoBehaviour
 
     List<CountryRegion> m_countryRegionList;
 
-    List<VoronoiShape> vShapes;
-
     private void Awake()
     {
         // Get Point List
@@ -22,8 +20,8 @@ public class MapInitialiser : MonoBehaviour
         }
 
         // Create Voronoi Diagram
-        VoronoiDiagram vDiagram = new VoronoiDiagram(pointList, 100.0f);
-        vShapes = vDiagram.vShapes;
+        VoronoiDiagram vDiagram = new VoronoiDiagram(pointList, 100.0f, 10, 10);
+        List<VoronoiShape> vShapes = vDiagram.vShapes;
 
         // Initialise Country List
         m_countryRegionList = new List<CountryRegion>();
@@ -32,17 +30,19 @@ public class MapInitialiser : MonoBehaviour
             CountryRegion newCountry = Instantiate<CountryRegion>(countryRegionPrefab);
             m_countryRegionList.Add(newCountry);
         }
+
+        // Assigin Shapes to country region
+        for (int i = 0; i < m_countryRegionList.Count; i++)
+        {
+            CountryRegion countryRegion = m_countryRegionList[i];
+            countryRegion.InitialiseShape(vShapes[i], m_countryRegionList);
+        }
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        // Assigin Shapes to country region
-        for(int i = 0; i < m_countryRegionList.Count; i++)
-        {
-            CountryRegion countryRegion = m_countryRegionList[i];
-            countryRegion.InitialiseShape(vShapes[i], m_countryRegionList);
-        }
+
     }
 
     // Update is called once per frame

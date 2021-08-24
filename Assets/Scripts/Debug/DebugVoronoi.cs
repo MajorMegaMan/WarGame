@@ -45,15 +45,18 @@ public class DebugVoronoi : MonoBehaviour
     public bool drawSingleShape = false;
     public int drawShapeIndex = 0;
     public bool drawNeighbourConnections = false;
+    public bool drawShapePointIndex = false;
+    public int shapePointIndex = 0;
 
     public List<VoronoiShape> debugShapes;
+
+    [Header("Boundary")]
+    public int mapWidth = 10;
+    public int mapHeight = 10;
 
     [Header("Random Values")]
     public bool useRandomPoints = false;
     public int seed = 0;
-
-    public int mapWidth = 10;
-    public int mapHeight = 10;
 
     public int pointcount = 10;
 
@@ -134,7 +137,7 @@ public class DebugVoronoi : MonoBehaviour
 
     List<VoronoiShape> InitVShapes(DelaunyMap delMap, List<VoronoiPoint> vPoints)
     {
-        return VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist);
+        return VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist, mapWidth, mapHeight);
     }
 
     void DrawTri(Triangle tri)
@@ -245,6 +248,12 @@ public class DebugVoronoi : MonoBehaviour
         }
         Gizmos.color = shapeColour;
         Gizmos.DrawLine(shape.points[shape.points.Count - 1], shape.points[0]);
+
+        if(drawShapePointIndex)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawCube(shape.points[shapePointIndex], Vector3.one);
+        }
     }
 
     void DrawVToCentre(VoronoiShape shape)
@@ -260,6 +269,27 @@ public class DebugVoronoi : MonoBehaviour
         Gizmos.DrawLine(shape.points[shape.points.Count - 1], shape.centre);
     }
 
+    void DrawBoundary()
+    {
+        float halfWidth = (float)mapWidth / 2.0f;
+        float halfHeight = (float)mapHeight / 2.0f;
+
+        Vector2[] UV = new Vector2[4];
+
+        UV[0] = new Vector2(-halfWidth, -halfHeight);
+        UV[1] = new Vector2(-halfWidth, halfHeight);
+        UV[2] = new Vector2(halfWidth, halfHeight);
+        UV[3] = new Vector2(halfWidth, -halfHeight);
+
+
+        Gizmos.color = Color.black;
+        for (int i = 0; i < 3; i++)
+        {
+            Gizmos.DrawLine(UV[i], UV[i + 1]);
+        }
+        Gizmos.DrawLine(UV[3], UV[0]);
+    }
+
     void OnDrawGizmos()
     {
         List<Transform> drawPoints = points;
@@ -268,6 +298,9 @@ public class DebugVoronoi : MonoBehaviour
         {
             InitPoints(out drawPoints);
         }
+
+        // DrawBoundary
+        DrawBoundary();
 
         // Create deluany map
         PointList pointList = new PointList();

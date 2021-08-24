@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Voronoi;
+using Voronoi.Helpers;
 
 namespace Voronoi.Deluany
 {
@@ -10,7 +11,19 @@ namespace Voronoi.Deluany
         public List<DelPoint> delPoints;
         public List<DelTriangle> delTris;
 
-        public DelaunyMap(List<Vector2> points, float maxRadius = float.PositiveInfinity)
+        public DelaunyMap(List<Vector2> points)
+        {
+            delPoints = new List<DelPoint>();
+            delTris = new List<DelTriangle>();
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                delPoints.Add(new DelPoint(points[i], i));
+            }
+            delTris = CalcTriangles(delPoints);
+        }
+
+        public DelaunyMap(List<Vector2> points, float maxRadius)
         {
             delPoints = new List<DelPoint>();
             delTris = new List<DelTriangle>();
@@ -22,7 +35,35 @@ namespace Voronoi.Deluany
             delTris = CalcTriangles(delPoints, maxRadius);
         }
 
-        public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints, float maxRadius = float.PositiveInfinity)
+        public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints)
+        {
+            int triCount = 0;
+            List<DelTriangle> delTriangles = new List<DelTriangle>();
+
+            for (int a = 0; a < delPoints.Count - 2; a++)
+            {
+                for (int b = a + 1; b < delPoints.Count - 1; b++)
+                {
+                    for (int c = b + 1; c < delPoints.Count; c++)
+                    {
+                        DelTriangle potentialTri = new DelTriangle(delPoints[a], delPoints[b], delPoints[c]);
+
+                        if (ConfirmTriangleAgainstPointList(potentialTri, delPoints, a, b, c))
+                        {
+                            potentialTri.SetIndex(triCount);
+                            triCount++;
+                            delTriangles.Add(potentialTri);
+                        }
+                    }
+                }
+            }
+
+            ConnectDelTriangles(delTriangles);
+
+            return delTriangles;
+        }
+
+        public static List<DelTriangle> CalcTriangles(List<DelPoint> delPoints, float maxRadius)
         {
             int triCount = 0;
             List<DelTriangle> delTriangles = new List<DelTriangle>();
@@ -47,21 +88,8 @@ namespace Voronoi.Deluany
                     }
                 }
             }
-        
-            // Check connections between all found triangles
-            for(int i = 0; i < delTriangles.Count - 1; i++)
-            {
-                for(int j = i + 1; j < delTriangles.Count; j++)
-                {
-                    delTriangles[i].IdentifyConnections(delTriangles[j]);
-                }
-            }
 
-            // Connect del Points together
-            foreach(DelTriangle delTri in delTriangles)
-            {
-                delTri.ConnectDelPoints();
-            }
+            ConnectDelTriangles(delTriangles);
 
             return delTriangles;
         }
@@ -150,9 +178,19 @@ namespace Voronoi.Deluany
             return meanCentre;
         }
 
-        void ConnectDelPoints()
+        static void ConnectDelTriangles(List<DelTriangle> delTriangles)
         {
-            foreach(DelTriangle delTri in delTris)
+            // Check connections between all found triangles
+            for (int i = 0; i < delTriangles.Count - 1; i++)
+            {
+                for (int j = i + 1; j < delTriangles.Count; j++)
+                {
+                    delTriangles[i].IdentifyConnections(delTriangles[j]);
+                }
+            }
+
+            // Connect del Points together
+            foreach (DelTriangle delTri in delTriangles)
             {
                 delTri.ConnectDelPoints();
             }
@@ -389,32 +427,6 @@ namespace Voronoi.Deluany
             return Vector3.Dot(cross, normal) < 0;
         }
 
-        struct DVector2
-        {
-            public double x;
-            public double y;
-
-            public double magnitude { get { return System.Math.Sqrt(x * x + y * y); } }
-
-            public DVector2(Vector2 point)
-            {
-                this.x = point.x;
-                this.y = point.y;
-            }
-
-            public static DVector2 operator -(DVector2 lhs, DVector2 rhs)
-            {
-                lhs.x -= rhs.x;
-                lhs.y -= rhs.y;
-                return lhs;
-            }
-
-            public static double Dot(DVector2 lhs, DVector2 rhs)
-            {
-                return lhs.x * rhs.x + lhs.y * rhs.y;
-            }
-        }
-
         public Vector2 CalcCircumcentre()
         {
             DVector2 pointA = new DVector2(this.pointA);
@@ -442,19 +454,16 @@ namespace Voronoi.Deluany
             double sin2B = System.Math.Sin(2 * angleB);
             double sin2C = System.Math.Sin(2 * angleC);
 
-            double circumX = 0.0;
-            double circumY = 0.0;
+            DVector2 dCircum = DVector2.zero;
 
-            circumX = (pointA.x * sin2A) + (pointB.x * sin2B) + (pointC.x * sin2C);
-            circumY = (pointA.y * sin2A) + (pointB.y * sin2B) + (pointC.y * sin2C);
+            dCircum.x = (pointA.x * sin2A) + (pointB.x * sin2B) + (pointC.x * sin2C);
+            dCircum.y = (pointA.y * sin2A) + (pointB.y * sin2B) + (pointC.y * sin2C);
 
-            circumX /= sin2A + sin2B + sin2C;
-            circumY /= sin2A + sin2B + sin2C;
+            dCircum.x /= sin2A + sin2B + sin2C;
+            dCircum.y /= sin2A + sin2B + sin2C;
 
             //circumcentre /= sin2A + sin2B + sin2C;
-            Vector2 circumcentre = Vector2.zero;
-            circumcentre.x = (float)circumX;
-            circumcentre.y = (float)circumY;
+            Vector2 circumcentre = dCircum.GetVector2();
 
             return circumcentre;
         }
