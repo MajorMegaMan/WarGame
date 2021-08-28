@@ -690,7 +690,11 @@ namespace Voronoi.Helpers
                 List<Vector2> intersections = cookieBox.GetIntersections(shapeLine.lineOverLap);
                 foreach(Vector2 intersectPoint in intersections)
                 {
-                    resultPoints.Add(intersectPoint);
+                    Vector2 clamped = intersectPoint;
+                    clamped.x = Mathf.Clamp(intersectPoint.x, -halfWidth, halfWidth);
+                    clamped.y = Mathf.Clamp(intersectPoint.y, -halfHeight, halfHeight);
+
+                    resultPoints.Add(clamped);
                 }
             }
 
