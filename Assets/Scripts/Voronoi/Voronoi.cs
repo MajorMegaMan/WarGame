@@ -18,9 +18,11 @@ namespace Voronoi
 
             vPoints = CreateVPoints(delMap);
             vShapes = FindShapes(vPoints, delMap, debugBoundaryDist, boundaryWidth, boundaryHeight);
+
+            FixVoronoiDiagramCorners(vShapes, boundaryWidth, boundaryHeight);
         }
 
-        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight, float maxRadius = float.PositiveInfinity)
+        public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight, float maxRadius)
         {
             delMap = new DelaunyMap(points, maxRadius);
 
@@ -105,6 +107,116 @@ namespace Voronoi
             var delToVPoints = FindPointShapeList(vPoints, delMap);
             return FindShapes(delToVPoints, debugBoundaryDist, boundaryWidth, boundaryHeight);
         }
+
+        struct SearchValues
+        {
+            public VoronoiShape shape;
+            public int index;
+            public Vector2 point;
+
+            public SearchValues(VoronoiShape shape, int index, Vector2 point)
+            {
+                this.shape = shape;
+                this.index = index;
+                this.point = point;
+            }
+
+            public void AssignSearchValues(VoronoiShape shape, int index, Vector2 point)
+            {
+                this.shape = shape;
+                this.index = index;
+                this.point = point;
+            }
+
+            public void Finalise(Vector2 cornerLocation)
+            {
+                shape.points.Add(cornerLocation);
+                VMaths.GiftWrap(ref shape.points);
+            }
+        }
+
+        public static void FixVoronoiDiagramCorners(List<VoronoiShape> vShapes, float boundaryWidth, float boundaryHeight)
+        {
+            float halfWidth = boundaryWidth / 2.0f;
+            float halfHeight = boundaryHeight / 2.0f;
+
+            SearchValues topLeftSearch = new SearchValues(vShapes[0], 0, vShapes[0].points[0]);
+            SearchValues topRightSearch = new SearchValues(vShapes[0], 0, vShapes[0].points[0]);
+
+            SearchValues bottomLeftSearch = new SearchValues(vShapes[0], 0, vShapes[0].points[0]);
+            SearchValues bottomRightSearch = new SearchValues(vShapes[0], 0, vShapes[0].points[0]);
+
+            for (int i = 0; i < vShapes.Count; i++)
+            {
+                VoronoiShape currentShape = vShapes[i];
+                for(int pointIndex = 0; pointIndex < currentShape.points.Count; pointIndex++)
+                {
+                    Vector2 currentPoint = currentShape.points[pointIndex];
+
+                    // Top searches
+                    if (Mathf.Approximately(currentPoint.x, topLeftSearch.point.x))
+                    {
+                        if (currentShape.centre.y > topLeftSearch.shape.centre.y)
+                        {
+                            topLeftSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                        }
+                    }
+                    else if (currentPoint.x < topLeftSearch.point.x)
+                    {
+                        topLeftSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                    }
+
+                    if (Mathf.Approximately(currentPoint.x, topRightSearch.point.x))
+                    {
+                        if (currentShape.centre.y > topRightSearch.shape.centre.y)
+                        {
+                            topRightSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                        }
+                    }
+                    else if (currentPoint.x > topRightSearch.point.x)
+                    {
+                        topRightSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                    }
+
+                    // bottom searches
+                    if (Mathf.Approximately(currentPoint.x, bottomLeftSearch.point.x))
+                    {
+                        if (currentShape.centre.y < bottomLeftSearch.shape.centre.y)
+                        {
+                            bottomLeftSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                        }
+                    }
+                    else if (currentPoint.x < bottomLeftSearch.point.x)
+                    {
+                        bottomLeftSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                    }
+
+                    if (Mathf.Approximately(currentPoint.x, bottomRightSearch.point.x))
+                    {
+                        if (currentShape.centre.y < bottomRightSearch.shape.centre.y)
+                        {
+                            bottomRightSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                        }
+                    }
+                    else if (currentPoint.x > bottomRightSearch.point.x)
+                    {
+                        bottomRightSearch.AssignSearchValues(currentShape, pointIndex, currentPoint);
+                    }
+                }
+            }
+
+            Vector2 topLeft = new Vector2(-halfWidth, halfHeight);
+            Vector2 topRight = new Vector2(halfWidth, halfHeight);
+
+            Vector2 bottomLeft = new Vector2(-halfWidth, -halfHeight);
+            Vector2 bottomRight = new Vector2(halfWidth, -halfHeight);
+
+            topLeftSearch.Finalise(topLeft);
+            topRightSearch.Finalise(topRight);
+
+            bottomLeftSearch.Finalise(bottomLeft);
+            bottomRightSearch.Finalise(bottomRight);
+        }
     }
 
     public struct VoronoiPoint
@@ -173,20 +285,45 @@ namespace Voronoi
                 neighbours.Add(neighbour.index);
             }
 
+            CookieCutter.CookieBox cookieBox = new CookieCutter.CookieBox(boundaryWidth, boundaryHeight);
+
             foreach (VoronoiPoint vPoint in delVPoint.connectedVPoints)
             {
                 points.Add(vPoint.position);
             }
 
-            FindPotentialBoundaryPoints(delVPoint, debugBoundaryDist);
+            // Find the potential extended points to add
+            var pointsToAdd = FindPotentialBoundaryPoints(delVPoint, debugBoundaryDist);
 
-            GiftWrap();
+            // combine the points and found points into a big megaList
+            List<Vector2> combined = new List<Vector2>(points);
+            foreach(var point in pointsToAdd)
+            {
+                combined.Add(point);
+            }
+
+            // Giftwrapping will remove points that do not lie on the convex hull.
+            // However we expect all these points to be on the hull.
+            VMaths.GiftWrap(ref combined);
+
+            // If any points are missing then this means the the shape identified potential boundary points when it shouldn't have
+            if(combined.Count == points.Count + pointsToAdd.Count)
+            {
+                points = combined;
+            }
+            else
+            {
+                // Points were missing from the gift wrap therefore we will use the old point list as it is the correct form of the shape
+                // still need to gift wrap it.
+                GiftWrap();
+            }
 
             CookieCutter.CookieCutterShape(ref points, boundaryWidth, boundaryHeight);
         }
 
-        void FindPotentialBoundaryPoints(DelToVPoint delVPoint, float debugBoundaryDist)
+        List<Vector2> FindPotentialBoundaryPoints(DelToVPoint delVPoint, float debugBoundaryDist)
         {
+            List<Vector2> pointstoAdd = new List<Vector2>();
             if (delVPoint.connectedVPoints.Count == 1)
             {
                 VoronoiPoint vPoint = delVPoint.connectedVPoints[0];
@@ -203,7 +340,7 @@ namespace Voronoi
                 {
                     foreach (Connection emptyConnect in emptyConnections)
                     {
-                        FindBoundaryPoint(emptyConnect, vPoint, debugBoundaryDist);
+                        FindBoundaryPoint(pointstoAdd, emptyConnect, vPoint, debugBoundaryDist);
                     }
                 }
                 else if (emptyConnections.Count == 3)
@@ -217,7 +354,7 @@ namespace Voronoi
                         // if the dot product between 
                         if (connectDot < 0)
                         {
-                            FindBoundaryPoint(connect, vPoint, debugBoundaryDist);
+                            FindBoundaryPoint(pointstoAdd, connect, vPoint, debugBoundaryDist);
                         }
                     }
                 }
@@ -254,12 +391,12 @@ namespace Voronoi
                             }
                         }
 
-                        FindBoundaryPoint(target, vPoint, debugBoundaryDist);
+                        FindBoundaryPoint(pointstoAdd, target, vPoint, debugBoundaryDist);
                     }
                     else
                     {
                         // safe to use the empty connection
-                        FindBoundaryPoint(emptyConnections[0], vPoint, debugBoundaryDist);
+                        FindBoundaryPoint(pointstoAdd, emptyConnections[0], vPoint, debugBoundaryDist);
                     }
                 }
             }
@@ -298,7 +435,7 @@ namespace Voronoi
 
                             if (emptyConnections.Count == 1)
                             {
-                                FindBoundaryPoint(emptyConnections[0], vPoint, debugBoundaryDist);
+                                FindBoundaryPoint(pointstoAdd, emptyConnections[0], vPoint, debugBoundaryDist);
                             }
                             else if (emptyConnections.Count == 2)
                             {
@@ -318,15 +455,17 @@ namespace Voronoi
                                     towardsShape = emptyConnections[1];
                                 }
 
-                                FindBoundaryPoint(towardsShape, vPoint, debugBoundaryDist);
+                                FindBoundaryPoint(pointstoAdd, towardsShape, vPoint, debugBoundaryDist);
                             }
                         }
                     }
                 }
             }
+
+            return pointstoAdd;
         }
 
-        void FindBoundaryPoint(Connection connection, VoronoiPoint vPoint, float debugBoundaryDist)
+        void FindBoundaryPoint(List<Vector2> points, Connection connection, VoronoiPoint vPoint, float debugBoundaryDist)
         {
             if (!connection.isEmpty)
             {

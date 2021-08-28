@@ -137,7 +137,9 @@ public class DebugVoronoi : MonoBehaviour
 
     List<VoronoiShape> InitVShapes(DelaunyMap delMap, List<VoronoiPoint> vPoints)
     {
-        return VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist, mapWidth, mapHeight);
+        var vShapes = VoronoiDiagram.FindShapes(vPoints, delMap, debugBoundaryDist, mapWidth, mapHeight);
+        VoronoiDiagram.FixVoronoiDiagramCorners(vShapes, mapWidth, mapHeight);
+        return vShapes;
     }
 
     void DrawTri(Triangle tri)
@@ -413,6 +415,22 @@ public class DebugVoronoi : MonoBehaviour
         if(drawVoronoiEdges)
         {
             DrawVoronoiConnections(drawVPoints);
+
+            if (drawSingleVPoint)
+            {
+                Gizmos.color = Color.cyan;
+                var point = drawVPoints[vPointIndex];
+                {
+                    foreach (Connection connection in point.connectedPoints)
+                    {
+                        if (!connection.isEmpty)
+                        {
+                            int index = connection.otherTriangle;
+                            Gizmos.DrawLine(point.position, drawVPoints[index].position);
+                        }
+                    }
+                }
+            }
         }
 
         if(drawMidPoints)

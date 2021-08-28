@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Voronoi.Helpers
 {
-    public class VMaths
+    public static class VMaths
     {
         public static void GiftWrap(ref List<Vector2> points)
         {
@@ -96,6 +96,148 @@ namespace Voronoi.Helpers
             // a . b = |a| * |b| * cos theta
             return result;
         }
+
+        //Get the intersection between a line and a plane. 
+        //If the line and plane are not parallel, the function outputs true, otherwise false.
+        public static bool LinePlaneIntersection(out Vector2 intersection, Vector2 linePoint, Vector2 lineDir, Vector2 planeNormal, Vector2 planePoint)
+        {
+
+            float length;
+            float dotNumerator;
+            float dotDenominator;
+            Vector2 vector;
+            intersection = Vector2.zero;
+
+            //calculate the distance between the linePoint and the line-plane intersection point
+            dotNumerator = Vector2.Dot((planePoint - linePoint), planeNormal);
+            dotDenominator = Vector2.Dot(lineDir, planeNormal);
+
+            //line and plane are not parallel
+            if (dotDenominator != 0.0f)
+            {
+                length = dotNumerator / dotDenominator;
+
+                //create a vector from the linePoint to the intersection point
+                vector = lineDir * length;
+
+                //get the coordinates of the line-plane intersection point
+                intersection = linePoint + vector;
+
+                return true;
+            }
+
+            //output not valid
+            else
+            {
+                return false;
+            }
+        }
+
+        public static bool LinePlaneIntersection(out Vector2 intersection, Vector2 linePoint, Vector2 lineDir, Plane plane)
+        {
+            return LinePlaneIntersection(out intersection, linePoint, lineDir, plane.normal, plane.normal * -plane.distance);
+        }
+
+        //Get the shortest distance between a point and a plane. The output is signed so it holds information
+        //as to which side of the plane normal the point is.
+        public static float SignedDistancePlanePoint(Vector2 planeNormal, Vector2 planePoint, Vector2 point)
+        {
+            return Vector2.Dot(planeNormal, (point - planePoint));
+        }
+
+        public static int IsOverlappingPlane(Plane plane, Vector2 lineStart, Vector2 lineEnd)
+        {
+            float startToPlane = plane.GetDistanceToPoint(lineStart);
+            float endToPlane = plane.GetDistanceToPoint(lineEnd);
+
+            bool startBehind = startToPlane < 0;
+            bool endBehind = endToPlane < 0;
+
+            if (startBehind != endBehind)
+            {
+                // line is overlapping plane
+                return 0;
+            }
+
+            if (startBehind == false)
+            {
+                // line is fully in normal direction
+                return 1;
+            }
+            else
+            {
+                // line is fully behind normal direction
+                return -1;
+            }
+        }
+
+        public static bool LineLineIntersection(out Vector2 intersect, Vector2 lineStart1, Vector2 lineVec1, Vector2 lineStart2, Vector2 lineVec2)
+        {
+            // Convert to vec3 for cross product use
+            Vector3 lineDir1 = lineVec1;
+            Vector3 lineDir2 = lineVec2;
+
+            Vector3 vecDir3 = lineStart2 - lineStart1;
+            Vector3 crossVec1and2 = Vector3.Cross(lineDir1, lineDir2);
+            Vector3 crossVec3and2 = Vector3.Cross(vecDir3, lineDir2);
+
+            float planarFactor = Vector3.Dot(vecDir3, crossVec1and2);
+
+            //is coplanar, and not parrallel
+            if (Mathf.Abs(planarFactor) < 0.0001f && crossVec1and2.sqrMagnitude > 0.0001f)
+            {
+                float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
+
+                intersect = lineStart1 + (lineVec1 * s);
+                return true;
+            }
+            else
+            {
+                intersect = Vector3.zero;
+                return false;
+            }
+        }
+
+        // Finds intersection point as well as if the lines segments are overlapping.
+        // returns 0 = Two lines will never intersect. (parallel or colinear) : intersect defaults to zero.
+        // returns 1 = Two lines will eventually intersect but the segments do not overlap. : intersect is found.
+        // returns 2 = Two line segments have an intersection and are overlapping.
+        public static int LineLineIntersectionConstraint(out Vector2 intersect, Vector2 lineStart1, Vector2 lineVec1, Vector2 lineStart2, Vector2 lineVec2)
+        {
+            // Convert to vec3 for cross product use
+            Vector3 lineDir1 = lineVec1;
+            Vector3 lineDir2 = lineVec2;
+
+            Vector3 vecDir3 = lineStart2 - lineStart1;
+            Vector3 crossVec1and2 = Vector3.Cross(lineDir1, lineDir2);
+            Vector3 crossVec3and2 = Vector3.Cross(vecDir3, lineDir2);
+
+            float planarFactor = Vector3.Dot(vecDir3, crossVec1and2);
+
+            //is coplanar, and not parrallel
+            if (Mathf.Abs(planarFactor) < 0.0001f && crossVec1and2.sqrMagnitude > 0.0001f)
+            {
+                float s = Vector3.Dot(crossVec3and2, crossVec1and2) / crossVec1and2.sqrMagnitude;
+
+                intersect = lineStart1 + (lineVec1 * s);
+
+                Vector2 line2toIntersect = intersect - lineStart2;
+                float line2Dot = Vector2.Dot(line2toIntersect, lineVec2);
+
+
+                if (s < 0 || s * s > lineVec1.sqrMagnitude || line2Dot < 0 || line2toIntersect.sqrMagnitude > lineVec2.sqrMagnitude)
+                {
+                    return 1;
+                }
+
+                return 2;
+            }
+            else
+            {
+                intersect = Vector3.zero;
+                return 0;
+            }
+        }
     }
 
     struct DVector2
@@ -124,6 +266,13 @@ namespace Voronoi.Helpers
         static DVector2()
         {
             _zero = new DVector2(0.0, 0.0);
+        }
+
+        public static DVector2 operator +(DVector2 lhs, DVector2 rhs)
+        {
+            lhs.x += rhs.x;
+            lhs.y += rhs.y;
+            return lhs;
         }
 
         public static DVector2 operator -(DVector2 lhs, DVector2 rhs)
@@ -169,263 +318,385 @@ namespace Voronoi.Helpers
 
     public static class CookieCutter
     {
-        [System.Flags]
-        public enum BoundsDir
+        public struct LineOverlap
         {
-            inside = 0,
-            up = 1,
-            right = 2,
-            down = 4,
-            left = 8,
+            Vector2 m_start;
+            Vector2 m_end;
 
-            upRight = up | right,
-            upLeft = up | left,
+            int[] overlaps;
+            Vector2[] intersections;
 
-            downRight = down | right,
-            downLeft = down | left,
+            int m_overlapStatus;
 
-            horizontal = left | right,
-            vertical = up | down
+            public Vector2 start { get { return m_start; } }
+            public Vector2 end { get { return m_end; } }
+            public int topOverlap { get { return overlaps[0]; } private set { overlaps[0] = value; } }
+            public int rightOverlap { get { return overlaps[1]; } private set { overlaps[1] = value; } }
+            public int bottomOverlap { get { return overlaps[2]; } private set { overlaps[2] = value; } }
+            public int leftOverlap { get { return overlaps[3]; } private set { overlaps[3] = value; } }
+
+            // returns 1 = fully inside
+            // returns 0 = overlapping
+            // returns -1 = fully outside
+            public int overlapStatus { get { return m_overlapStatus; } }
+            public bool lineIsInside { get { return m_overlapStatus == 1; } }
+            public bool lineIsOutside { get { return m_overlapStatus == -1; } }
+            public bool lineIsOverlapping { get { return m_overlapStatus == 0; } }
+
+            public LineOverlap(CookieBox cookieBox, Vector2 lineStart, Vector2 lineEnd)
+            {
+                m_start = lineStart;
+                m_end = lineEnd;
+
+                overlaps = new int[4];
+                intersections = new Vector2[4];
+
+                m_overlapStatus = 0;
+
+                FindIntersections(cookieBox);
+                m_overlapStatus = FindOverlapStatus(cookieBox);
+            }
+
+            void FindIntersections(Plane plane, int index)
+            {
+                overlaps[index] = VMaths.IsOverlappingPlane(plane, m_start, m_end);
+                VMaths.LinePlaneIntersection(out intersections[index], m_start, (m_end - m_start).normalized, plane);
+            }
+
+            void FindIntersections(CookieBox cookieBox)
+            {
+                FindIntersections(cookieBox.topPlane, 0);
+                FindIntersections(cookieBox.rightPlane, 1);
+                FindIntersections(cookieBox.bottomPlane, 2);
+                FindIntersections(cookieBox.leftPlane, 3);
+            }
+
+            public bool AllInside()
+            {
+                return topOverlap + rightOverlap + bottomOverlap + leftOverlap == 4;
+            }
+
+            public List<Vector2> GetIntersections()
+            {
+                List<Vector2> result = null;
+                if (topOverlap == 0)
+                {
+                    if(result == null)
+                    {
+                        result = new List<Vector2>();
+                    }
+                    result.Add(intersections[0]);
+                }
+                if (rightOverlap == 0)
+                {
+                    if (result == null)
+                    {
+                        result = new List<Vector2>();
+                    }
+                    result.Add(intersections[1]);
+                }
+                if (bottomOverlap == 0)
+                {
+                    if (result == null)
+                    {
+                        result = new List<Vector2>();
+                    }
+                    result.Add(intersections[2]);
+                }
+                if (leftOverlap == 0)
+                {
+                    if (result == null)
+                    {
+                        result = new List<Vector2>();
+                    }
+                    result.Add(intersections[3]);
+                }
+                return result;
+            }
+
+            // returns 1 = fully inside
+            // returns 0 = overlapping
+            // returns -1 = fully outside
+            int FindOverlapStatus(CookieBox cookieBox)
+            {
+                if (AllInside())
+                {
+                    return 1;
+                }
+                bool startPointInside = cookieBox.ContainsPoint(start);
+                bool endPointInside = cookieBox.ContainsPoint(end);
+
+                List<Vector2> intersections = cookieBox.GetIntersections(this);
+
+                // If not the same, then they are overlapping
+                if (startPointInside != endPointInside || intersections != null)
+                {
+                    return 0;
+                }
+                else
+                {
+                    // fully outside
+                    return -1;
+                }
+            }
         }
 
-        public class ShapeExtrudingPoints
+        public struct CookieBox
         {
-            public VoronoiShape shape;
-            public List<int> pointIndices;
-            public List<BoundsDir> pointDir;
+            public Plane[] planes;
 
-            public int extrudingCount { get { return pointIndices.Count; } }
+            public float epsilon;
 
-            public ShapeExtrudingPoints()
+            public Plane topPlane { get { return planes[0]; } private set { planes[0] = value; } }
+            public Plane rightPlane { get { return planes[1]; } private set { planes[1] = value; } }
+            public Plane bottomPlane { get { return planes[2]; } private set { planes[2] = value; } }
+            public Plane leftPlane { get { return planes[3]; } private set { planes[3] = value; } }
+
+            public CookieBox(float width, float height, float epsilon = 0.00001f)
             {
-                pointIndices = new List<int>();
-                pointDir = new List<BoundsDir>();
+                float halfWidth = width / 2.0f;
+                float halfHeight = height / 2.0f;
+
+                planes = new Plane[4];
+
+                this.epsilon = epsilon;
+
+                topPlane = new Plane(-Vector3.up, Vector3.up * halfHeight);
+                rightPlane = new Plane(-Vector3.right, Vector3.right * halfWidth);
+                bottomPlane = new Plane(Vector3.up, Vector3.up * -halfHeight);
+                leftPlane = new Plane(Vector3.right, Vector3.right * -halfWidth);
+            }
+
+            public bool ContainsPoint(Vector2 point)
+            {
+                return ContainsPoint(point, epsilon);
+            }
+
+            public bool ContainsPoint(Vector2 point, float allowance)
+            {
+                foreach(Plane plane in planes)
+                {
+                    if (plane.GetDistanceToPoint(point) < 0 - allowance)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            public LineOverlap FindLineOverlap(Vector2 lineStart, Vector2 lineEnd)
+            {
+                return new LineOverlap(this, lineStart, lineEnd);
+            }
+
+            // returns the index of the start point of the line that is overlapping or outside
+            // returns -1 if no line was overlapping or outside
+            public int FindNextLineOutside(List<Vector2> points, int startIndex)
+            {
+                // for pair of points, find if not inside all planes
+                int currentIndex = startIndex;
+                do
+                {
+                    int nextIndex = GetAfter(currentIndex, points.Count);
+
+                    LineOverlap lineStatus = FindLineOverlap(points[currentIndex], points[currentIndex + 1]);
+                    if (!lineStatus.lineIsInside)
+                    {
+                        // line could be outside or overlapping
+                        return currentIndex;
+                    }
+
+                    currentIndex = nextIndex;
+                } while (currentIndex != startIndex);
+
+                {
+                    LineOverlap lineStatus = FindLineOverlap(points[points.Count - 1], points[startIndex]);
+                    if (!lineStatus.lineIsInside)
+                    {
+                        // line could be outside or overlapping
+                        return points.Count - 1;
+                    }
+                }
+
+                // If reached here, no line was found overlapping or outside the box
+                return -1;
+            }
+
+            // returns the index of the start point of the line that is overlapping or outside
+            // returns -1 if no line was overlapping or outside
+            public int FindNextLineInside(List<Vector2> points, int startIndex)
+            {
+                // for pair of points, find if not inside all planes
+                int currentIndex = startIndex;
+                do
+                {
+                    int nextIndex = GetAfter(currentIndex, points.Count);
+
+                    LineOverlap lineStatus = FindLineOverlap(points[currentIndex], points[nextIndex]);
+                    if (lineStatus.lineIsInside)
+                    {
+                        // line is Indside
+                        return currentIndex;
+                    }
+
+                    currentIndex = nextIndex;
+                } while (currentIndex != startIndex);
+
+                {
+                    LineOverlap lineStatus = FindLineOverlap(points[points.Count - 1], points[startIndex]);
+                    if (lineStatus.lineIsInside)
+                    {
+                        // line is Indside
+                        return points.Count - 1;
+                    }
+                }
+
+                // If reached here, no line was found overlapping or outside the box
+                return -1;
+            }
+
+            public List<Vector2> GetIntersections(LineOverlap lineOverlap)
+            {
+                List<Vector2> lineIntersects = lineOverlap.GetIntersections();
+                if(lineIntersects == null)
+                {
+                    return null;
+                }
+
+                List<Vector2> cookieIntersects = null;
+                foreach(Vector2 point in lineIntersects)
+                {
+                    if(ContainsPoint(point))
+                    {
+                        if(cookieIntersects == null)
+                        {
+                            cookieIntersects = new List<Vector2>();
+                        }
+                        cookieIntersects.Add(point);
+                    }
+                }
+
+                return cookieIntersects;
+            }
+        }
+
+        struct ShapeLineOverlap
+        {
+            public LineOverlap lineOverLap;
+            public int startIndex;
+            public int endIndex;
+
+            public ShapeLineOverlap(LineOverlap lineOverLap, int startIndex, int endIndex)
+            {
+                this.lineOverLap = lineOverLap;
+                this.startIndex = startIndex;
+                this.endIndex = endIndex;
             }
         }
 
         public static void CookieCutterShape(ref List<Vector2> points, float width, float height)
         {
-            // Find all points outside bounds
+            // Set up planes
             float halfWidth = width / 2.0f;
             float halfHeight = height / 2.0f;
 
-            // Search all points in shape to find points that may lie outside the bounds
-            ShapeExtrudingPoints extrudingPoints = new ShapeExtrudingPoints();
-            List<int> safePoints = new List<int>();
+            // Create box of planes
+            CookieBox cookieBox = new CookieBox(width, height);
 
-            for (int i = 0; i < points.Count; i++)
+            // Find line overlaps with cookieBox
+            // Do not include Lines that are completly outside the box
+            List<ShapeLineOverlap> insideBox = new List<ShapeLineOverlap>();
+            List<ShapeLineOverlap> overlapBox = new List<ShapeLineOverlap>();
+            List<ShapeLineOverlap> outsideBox = new List<ShapeLineOverlap>();
+            for (int i = 0; i < points.Count - 1; i++)
             {
-                BoundsDir boundsDir = PointOutSideBounds(points[i], halfWidth, halfHeight);
-                if (boundsDir != BoundsDir.inside)
+                int start = i;
+                int end = i + 1;
+                LineOverlap lineOverlap = cookieBox.FindLineOverlap(points[start], points[end]);
+                switch(lineOverlap.overlapStatus)
                 {
-                    // point is outside shape
-                    extrudingPoints.pointIndices.Add(i);
-                    extrudingPoints.pointDir.Add(boundsDir);
-                }
-                else
-                {
-                    safePoints.Add(i);
-                }
-            }
-
-
-            if (extrudingPoints.extrudingCount > 0)
-            {
-                // Has points outside
-                if (extrudingPoints.extrudingCount == 1)
-                {
-                    // Shape is not on the outside of the voronoi pattern but is should be clamped
-                    // Add in an extra position as two lines will cross the boundary
-
-                    int index = extrudingPoints.pointIndices[0];
-                    Vector2 firstResult = CalcOffsetToBoundary(points[index], points[GetBefore(index, points.Count)], extrudingPoints.pointDir[0], halfWidth, halfHeight);
-                    Vector2 lastResult = CalcOffsetToBoundary(points[index], points[GetAfter(index, points.Count)], extrudingPoints.pointDir[0], halfWidth, halfHeight);
-
-                    Vector2 orig = points[index];
-                    points[index] += firstResult;
-                    points.Add(orig + lastResult);
-                    VMaths.GiftWrap(ref points);
-                }
-                else
-                {
-                    // Shape has many points out of bounds which means only the first and last need to be clamped, the rest can be deleted
-                    // clamp first to not confuse the indices list, delete later
-                    // use first point index - 1 and last point index + 1 to find directions
-                    BoundaryBreakIndices breakOutIndices = FindBoundaryBreakIndices(extrudingPoints, points.Count);
-
-                    int exitIndex = breakOutIndices.exit;
-                    int enterIndex = breakOutIndices.enter;
-
-                    int beforeExit = breakOutIndices.beforeExit;
-                    int afterEnter = breakOutIndices.afterEnter;
-
-                    Vector2 firstResult = CalcOffsetToBoundary(points[exitIndex], points[beforeExit], extrudingPoints.pointDir[0], halfWidth, halfHeight);
-
-                    Vector2 lastResult = CalcOffsetToBoundary(points[enterIndex], points[afterEnter], extrudingPoints.pointDir[extrudingPoints.extrudingCount - 1], halfWidth, halfHeight);
-
-                    points[exitIndex] += firstResult;
-                    points[enterIndex] += lastResult;
-
-                    // delete middle points
-                    safePoints.Insert(0, exitIndex);
-                    safePoints.Add(enterIndex);
-
-                    RemoveBoundaryPoints(ref points, safePoints);
+                    case 1:
+                        {
+                            insideBox.Add(new ShapeLineOverlap(lineOverlap, start, end));
+                            break;
+                        }
+                    case 0:
+                        {
+                            overlapBox.Add(new ShapeLineOverlap(lineOverlap, start, end));
+                            break;
+                        }
+                    case -1:
+                        {
+                            outsideBox.Add(new ShapeLineOverlap(lineOverlap, start, end));
+                            break;
+                        }
                 }
             }
 
-            // Use found points
-
-            // Check if points should be 
-        }
-
-        public static Vector2 ClampPoint(Vector2 pointToClamp, BoundsDir boundsDirFlag, float halfWidth, float halfHeight)
-        {
-            Vector2 clampResult = pointToClamp;
-            if ((BoundsDir.horizontal & boundsDirFlag) != 0)
+            int cycleStart = points.Count - 1;
+            int cycleEnd = 0;
+            LineOverlap cycleLineOverlap = cookieBox.FindLineOverlap(points[cycleStart], points[cycleEnd]);
+            switch (cycleLineOverlap.overlapStatus)
             {
-                clampResult.x = Mathf.Clamp(pointToClamp.x, -halfWidth, halfWidth);
-            }
-            else if((BoundsDir.vertical & boundsDirFlag) != 0)
-            {
-                clampResult.y = Mathf.Clamp(pointToClamp.y, -halfHeight, halfHeight);
-            }
-
-            return clampResult;
-        }
-
-        public static Vector2 CalcOffsetToBoundary(Vector2 start, Vector2 end, BoundsDir startBoundsFlag, float halfWidth, float halfHeight)
-        {
-            Vector2 direction = end - start;
-            Vector2 clampedPoint = ClampPoint(start, startBoundsFlag, halfWidth, halfHeight);
-            Vector2 pointToBoundary = clampedPoint - start;
-            Vector2 result = VMaths.ProjectVector(pointToBoundary, direction);
-
-            float test = Mathf.Abs(start.x + result.x);
-
-            bool whatThefuck = test > halfWidth;
-            if(whatThefuck)
-            {
-                Debug.Log(test + " > " + halfWidth);
-            }
-            else
-            {
-                Debug.Log(test + " is not Greater than " + halfWidth);
+                case 1:
+                    {
+                        insideBox.Add(new ShapeLineOverlap(cycleLineOverlap, cycleStart, cycleEnd));
+                        break;
+                    }
+                case 0:
+                    {
+                        overlapBox.Add(new ShapeLineOverlap(cycleLineOverlap, cycleStart, cycleEnd));
+                        break;
+                    }
+                case -1:
+                    {
+                        outsideBox.Add(new ShapeLineOverlap(cycleLineOverlap, cycleStart, cycleEnd));
+                        break;
+                    }
             }
 
-            // need to re check if this was clamped properly
-            if (test > halfWidth)
-            {
-                clampedPoint = ClampPoint(start, BoundsDir.horizontal, halfWidth, halfHeight);
-                pointToBoundary = clampedPoint - start;
-                result = VMaths.ProjectVector(pointToBoundary, direction);
-            }
-            else if(Mathf.Abs(start.y + result.y) > halfHeight)
-            {
-                clampedPoint = ClampPoint(start, BoundsDir.vertical, halfWidth, halfHeight);
-                pointToBoundary = clampedPoint - start;
-                result = VMaths.ProjectVector(pointToBoundary, direction);
-            }
-
-            return result;
-        }
-
-        public static BoundsDir PointOutSideBounds(Vector2 point, float halfWidth, float halfHeight)
-        {
-            BoundsDir boundsDir = 0;
-            if (point.y > halfHeight)
-            {
-                boundsDir = boundsDir | BoundsDir.up;
-            }
-            else if (point.y < -halfHeight)
-            {
-                boundsDir = boundsDir | BoundsDir.down;
-            }
-
-            if (point.x > halfWidth)
-            {
-                boundsDir = boundsDir | BoundsDir.right;
-            }
-            else if (point.x < -halfWidth)
-            {
-                boundsDir = boundsDir | BoundsDir.left;
-            }
-
-            return boundsDir;
-        }
-
-        public struct BoundaryBreakIndices
-        {
-            public int exit;
-            public int enter;
-            public int beforeExit;
-            public int afterEnter;
-        }
-
-        public static BoundaryBreakIndices FindBoundaryBreakIndices(ShapeExtrudingPoints extrudingPoints, int pointsCount)
-        {
-            BoundaryBreakIndices indices = new BoundaryBreakIndices();
-
-            // The positions of the shapes move in a counter clockwise order. 
-            // Therefore the lowest index will be the left most to left-down most and the highest index will be the most counter clockwise to the first point
-            //
-            //   highest o --o
-            //          /     \
-            // lowest  o       \
-            //         \        o
-            //          \      /
-            //           o----o
-            //
-            // we want the lowest index and highest index that lie out side the boundary
-            int enter = extrudingPoints.pointIndices[extrudingPoints.extrudingCount - 1];
-            int exit = extrudingPoints.pointIndices[0];
-
-            int afterEnter = GetAfter(enter, pointsCount);
-            int beforeExit = GetBefore(exit, pointsCount);
-
-            bool foundEnter = false;
-            int prev = enter;
-
-            for (int i = 0; i < extrudingPoints.extrudingCount; i++)
-            {
-                int current = extrudingPoints.pointIndices[i];
-                int beforeCurrent = GetBefore(current, pointsCount);
-                int afterCurrent = GetAfter(current, pointsCount);
-
-                if (!foundEnter && beforeCurrent != prev)
-                {
-                    enter = prev;
-                    afterEnter = GetAfter(prev, pointsCount);
-
-                    exit = current;
-                    beforeExit = beforeCurrent;
-
-                    foundEnter = true;
-                    break;
-                }
-
-                prev = current;
-            }
-
-            indices.exit = exit;
-            indices.enter = enter;
-
-            indices.beforeExit = beforeExit;
-            indices.afterEnter = afterEnter;
-
-            return indices;
-        }
-
-        public static void RemoveBoundaryPoints(ref List<Vector2> points, List<int> safePoints)
-        {
             List<Vector2> resultPoints = new List<Vector2>();
-            foreach (int index in safePoints)
+
+            // Safely add inside lines
+            bool[] indexIsAdded = new bool[points.Count];
+
+            void AddPointToResults(List<Vector2> targetShapePoints, int index)
             {
-                resultPoints.Add(points[index]);
+                if (!indexIsAdded[index])
+                {
+                    indexIsAdded[index] = true;
+                    resultPoints.Add(targetShapePoints[index]);
+                }
             }
 
+            foreach(var shapeLine in insideBox)
+            {
+                AddPointToResults(points, shapeLine.startIndex);
+                AddPointToResults(points, shapeLine.endIndex);
+            }
+
+            // Add intersections from the overlap points
+            foreach (var shapeLine in overlapBox)
+            {
+                if(cookieBox.ContainsPoint(points[shapeLine.startIndex]))
+                {
+                    AddPointToResults(points, shapeLine.startIndex);
+                }
+                if (cookieBox.ContainsPoint(points[shapeLine.endIndex]))
+                {
+                    AddPointToResults(points, shapeLine.endIndex);
+                }
+
+                List<Vector2> intersections = cookieBox.GetIntersections(shapeLine.lineOverLap);
+                foreach(Vector2 intersectPoint in intersections)
+                {
+                    resultPoints.Add(intersectPoint);
+                }
+            }
+
+            // finalise pointList
+            VMaths.GiftWrap(ref resultPoints);
             points = resultPoints;
-            VMaths.GiftWrap(ref points);
         }
 
         public static int GetBefore(int index, int max)
