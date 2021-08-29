@@ -34,6 +34,7 @@ public class DebugVoronoi : MonoBehaviour
     public float debugBoundaryDist = 10.0f;
     public bool drawSingleVPoint = false;
     public int vPointIndex = 0;
+    public int lloydRelaxCount = 0;
 
     [Header("Bisectors")]
     public bool drawMidPoints = true;
@@ -332,16 +333,23 @@ public class DebugVoronoi : MonoBehaviour
             }
         }
 
-        if(drawDelPoints)
+        VoronoiDiagram vDiagram = new VoronoiDiagram(pointList, debugBoundaryDist, mapWidth, mapHeight);
+
+        for (int i = 0; i < lloydRelaxCount; i++)
+        {
+            vDiagram.LloydRelaxation();
+        }
+
+        if (drawDelPoints)
         {
             Gizmos.color = Color.red;
-            foreach(var point in pointList)
+            foreach(var point in vDiagram.delMap.delPoints)
             {
-                Gizmos.DrawSphere(point, 0.4f);
+                Gizmos.DrawSphere(point.point, 0.4f);
             }
         }
 
-        DelaunyMap delaunyMap = new DelaunyMap(pointList, maxCircumCircleRadius);
+        DelaunyMap delaunyMap = vDiagram.delMap;
 
         if(drawTargetDelPoint)
         {
@@ -401,7 +409,10 @@ public class DebugVoronoi : MonoBehaviour
             }
         }
 
-        InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
+        //InitVoronoi(out List<VoronoiPoint> drawVPoints, delaunyMap.delTris);
+
+        List<VoronoiPoint> drawVPoints = vDiagram.vPoints;
+
         if(drawVoronoiPoints)
         {
             DrawVoronoiPoints(drawVPoints);

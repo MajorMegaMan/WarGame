@@ -12,22 +12,57 @@ namespace Voronoi
         public List<VoronoiShape> vShapes;
         public DelaunyMap delMap;
 
+        float m_boundaryWidth;
+        float m_boundaryHeight;
+        float m_debugBoundaryDist;
+
         public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
         {
-            delMap = new DelaunyMap(points);
-
-            vPoints = CreateVPoints(delMap);
-            vShapes = FindShapes(vPoints, delMap, debugBoundaryDist, boundaryWidth, boundaryHeight);
-
-            FixVoronoiDiagramCorners(vShapes, boundaryWidth, boundaryHeight);
+            Init(points, debugBoundaryDist, boundaryWidth, boundaryHeight);
         }
 
         public VoronoiDiagram(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight, float maxRadius)
         {
-            delMap = new DelaunyMap(points, maxRadius);
+            Init(points, debugBoundaryDist, boundaryWidth, boundaryHeight, maxRadius);
+        }
 
+        void Init(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
+        {
+            InitVar(boundaryWidth, boundaryHeight, debugBoundaryDist);
+            InitDeluanay(points);
+            InitVoronoi(debugBoundaryDist, boundaryWidth, boundaryHeight);
+        }
+
+        void Init(List<Vector2> points, float debugBoundaryDist, float boundaryWidth, float boundaryHeight, float maxRadius)
+        {
+            InitVar(boundaryWidth, boundaryHeight, debugBoundaryDist);
+            InitDeluanay(points, maxRadius);
+            InitVoronoi(debugBoundaryDist, boundaryWidth, boundaryHeight);
+        }
+        
+        void InitVar(float boundaryWidth, float boundaryHeight, float debugBoundaryDist)
+        {
+            m_boundaryWidth = boundaryWidth;
+            m_boundaryHeight = boundaryHeight;
+            m_debugBoundaryDist = debugBoundaryDist;
+        }
+
+        void InitDeluanay(List<Vector2> points)
+        {
+            delMap = new DelaunyMap(points);
+        }
+
+        void InitDeluanay(List<Vector2> points, float maxRadius)
+        {
+            delMap = new DelaunyMap(points, maxRadius);
+        }
+
+        void InitVoronoi(float debugBoundaryDist, float boundaryWidth, float boundaryHeight)
+        {
             vPoints = CreateVPoints(delMap);
             vShapes = FindShapes(vPoints, delMap, debugBoundaryDist, boundaryWidth, boundaryHeight);
+
+            FixVoronoiDiagramCorners(vShapes, boundaryWidth, boundaryHeight);
         }
 
         public static List<VoronoiPoint> CreateVPoints(DelaunyMap delMap)
@@ -216,6 +251,18 @@ namespace Voronoi
 
             bottomLeftSearch.Finalise(bottomLeft);
             bottomRightSearch.Finalise(bottomRight);
+        }
+
+        public void LloydRelaxation()
+        {
+            List<Vector2> centroidPoints = new List<Vector2>();
+            foreach(VoronoiShape shape in vShapes)
+            {
+                centroidPoints.Add(shape.GetCentroid());
+            }
+
+            InitDeluanay(centroidPoints);
+            InitVoronoi(m_debugBoundaryDist, m_boundaryWidth, m_boundaryHeight);
         }
     }
 
@@ -496,6 +543,18 @@ namespace Voronoi
         void GiftWrap()
         {
             VMaths.GiftWrap(ref points);
+        }
+
+        public Vector2 GetCentroid()
+        {
+            Vector2 averagePos = Vector2.zero;
+            foreach(Vector2 point in points)
+            {
+                averagePos += point;
+            }
+
+            averagePos /= points.Count;
+            return averagePos;
         }
     }
 }

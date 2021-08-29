@@ -12,7 +12,8 @@ namespace Voronoi.Helpers
             // Check shape has enough points
             if (points.Count < 3)
             {
-                Debug.LogError("This shape shouldn't exist. There is less than 3 vertices");
+                // This shape has less than three vertices. More points should be added before trying to giftwrap it.
+                // Depending on the situation, this could be intended but it will still need at least 3 points if this is intended to be used as a shape.
                 return;
             }
 
